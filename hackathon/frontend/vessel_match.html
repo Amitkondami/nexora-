@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Vessel Match — Nexora Freight Intelligence</title>
+    <meta name="description" content="AI-powered vessel recommendation engine using real vessel database with port constraints.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+    <script>
+        let sd = sessionStorage.getItem('nexora_user_data');
+        if (!sd) {
+            sessionStorage.setItem('nexora_user_data', JSON.stringify({name:'Demo User',email:'demo.user@nexora.com',picture:null}));
+        }
+    </script>
+    <style>
+        .vm-layout{display:flex;flex-direction:column;gap:28px;max-width:1160px;margin:0 auto;width:100%;}
+        .qcard{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:32px;}
+        .qcard-hdr{display:flex;align-items:center;gap:14px;margin-bottom:28px;}
+        .qcard-icon{width:46px;height:46px;background:var(--accent-glow);border:1px solid var(--accent);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+        .qcard-title{font-size:18px;font-weight:700;color:var(--off);}
+        .qcard-sub{font-size:12px;color:var(--text-sec);margin-top:3px;line-height:1.5;}
+        .form-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+        .form-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+        @media(max-width:800px){.form-grid,.form-grid-2{grid-template-columns:1fr;}}
+        .fg{display:flex;flex-direction:column;gap:7px;}
+        .fg label{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text-sec);letter-spacing:.5px;text-transform:uppercase;}
+        .fg select,.fg input{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;color:var(--off);padding:11px 14px;font-family:'Inter',sans-serif;font-size:13px;outline:none;transition:border-color .2s,background .2s;appearance:none;width:100%;}
+        .fg select:focus,.fg input:focus{border-color:rgba(159,107,10,.6);background:rgba(159,107,10,.05);}
+        .fg select:disabled{opacity:.4;cursor:not-allowed;}
+        .fdiv{display:flex;align-items:center;gap:12px;padding:8px 0;}
+        .fdiv span{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);white-space:nowrap;}
+        .fdiv hr{flex:1;border:none;border-top:1px solid var(--border);}
+        .abtn{background:var(--off);color:#040403;border:none;border-radius:6px;padding:14px 32px;font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;margin-top:24px;display:flex;align-items:center;gap:10px;}
+        .abtn:hover{background:#e0e0e0;transform:translateY(-1px);}
+        .abtn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+        .spin{width:14px;height:14px;border:2px solid rgba(0,0,0,.2);border-top-color:#040403;border-radius:50%;animation:spin .7s linear infinite;display:none;}
+        .abtn.loading .spin{display:block;}
+        @keyframes spin{to{transform:rotate(360deg);}}
+        #ra{display:none;flex-direction:column;gap:24px;animation:fadeUp .4s ease;}
+        #ra.vis{display:flex;}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:none;}}
+
+        /* Route bar */
+        .rbar{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 28px;display:flex;align-items:center;gap:36px;flex-wrap:wrap;}
+        .rbi{display:flex;flex-direction:column;gap:3px;}
+        .rbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+        .rbv{font-size:20px;font-weight:700;color:var(--off);}
+        .rbv.ac{color:#e0a83a;}
+        .rbv.sm{font-size:14px;}
+
+        /* Constraint cards */
+        .cstrip{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+        @media(max-width:700px){.cstrip{grid-template-columns:1fr;}}
+        .ccard{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px;}
+        .ccard-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);letter-spacing:.5px;margin-bottom:12px;}
+        .ccard-name{font-size:15px;font-weight:700;color:var(--off);margin-bottom:12px;}
+        .cpills{display:flex;flex-wrap:wrap;gap:7px;}
+        .cp{padding:4px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;}
+        .cp.ok{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.2);}
+        .cp.warn{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.2);}
+        .cp.info{background:rgba(159,107,10,.1);color:#e0a83a;border:1px solid rgba(159,107,10,.2);}
+        .cp.bad{background:rgba(239,68,68,.1);color:#ef4444;border:1px solid rgba(239,68,68,.2);}
+
+        /* Section label */
+        .slbl{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);letter-spacing:.5px;text-transform:uppercase;margin-bottom:12px;}
+
+        /* Best match */
+        .best-wrap{background:linear-gradient(135deg,rgba(159,107,10,.13) 0%,rgba(15,14,13,1) 55%);border:1px solid rgba(159,107,10,.5);border-radius:12px;padding:28px 32px;position:relative;overflow:hidden;}
+        .best-badge{position:absolute;top:18px;right:22px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#e0a83a;font-weight:700;letter-spacing:1px;}
+        .vname{font-size:22px;font-weight:800;color:var(--off);margin-bottom:4px;}
+        .vtype{font-size:12px;color:var(--text-sec);margin-bottom:20px;font-family:'JetBrains Mono',monospace;}
+        .vclass-tag{display:inline-block;padding:3px 10px;border-radius:100px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;margin-left:10px;vertical-align:middle;}
+        .vclass-tag.bulk{background:rgba(245,158,11,.1);color:#fbbf24;border:1px solid rgba(245,158,11,.25);}
+        .vclass-tag.tanker{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3);}
+        .vclass-tag.lng{background:rgba(20,184,166,.1);color:#2dd4bf;border:1px solid rgba(20,184,166,.25);}
+        .vclass-tag.container{background:rgba(34,197,94,.1);color:#4ade80;border:1px solid rgba(34,197,94,.25);}
+
+        /* Spec grid */
+        .spec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin:20px 0;}
+        @media(max-width:700px){.spec-grid{grid-template-columns:repeat(2,1fr);}}
+        .spec{display:flex;flex-direction:column;gap:4px;}
+        .spec-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+        .spec-val{font-size:14px;font-weight:600;color:var(--off);}
+        .spec-val.ac{color:#e0a83a;}
+        .spec-val.green{color:#34d399;}
+        .spec-val.blue{color:#818cf8;}
+
+        /* Cost estimate bar */
+        .cost-bar{background:rgba(159,107,10,.06);border:1px solid rgba(159,107,10,.15);border-radius:8px;padding:16px 20px;display:flex;align-items:center;gap:32px;flex-wrap:wrap;margin:16px 0;}
+        .cost-item{display:flex;flex-direction:column;gap:3px;}
+        .cost-lbl{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);}
+        .cost-val{font-size:16px;font-weight:700;color:#e0a83a;}
+
+        /* Reason box */
+        .reason{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:6px;padding:14px 16px;font-size:13px;color:var(--text-sec);line-height:1.65;}
+        .reason strong{color:var(--off);}
+
+        /* Alternatives */
+        .alt-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+        @media(max-width:900px){.alt-grid{grid-template-columns:1fr 1fr;}}
+        @media(max-width:600px){.alt-grid{grid-template-columns:1fr;}}
+        .alt-card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px;transition:border-color .2s,transform .2s;}
+        .alt-card:hover{transform:translateY(-2px);}
+        .alt-card.suit{border-color:rgba(52,211,153,.2);}
+        .alt-card.unsuit{opacity:.55;}
+        .alt-name{font-size:14px;font-weight:700;color:var(--off);margin:8px 0 4px;}
+        .alt-type{font-size:11px;color:var(--text-sec);margin-bottom:12px;font-family:'JetBrains Mono',monospace;}
+        .alt-compat{font-size:11px;margin-bottom:14px;font-weight:600;}
+        .alt-compat.ok{color:#34d399;}
+        .alt-compat.no{color:#ef4444;}
+        .alt-specs{display:flex;flex-direction:column;gap:5px;}
+        .alt-spec{display:flex;justify-content:space-between;font-size:12px;}
+        .alt-spec span:first-child{color:var(--muted);font-family:'JetBrains Mono',monospace;font-size:10px;}
+        .alt-spec span:last-child{color:var(--off);font-weight:500;}
+        .alt-reason{margin-top:10px;font-size:11px;color:#ef4444;font-style:italic;}
+        .no-vessels{background:rgba(159,107,10,.05);border:1px solid rgba(159,107,10,.15);border-radius:8px;padding:20px;color:var(--text-sec);font-size:13px;text-align:center;}
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">NEXORA<span>FREIGHT</span></a>
+            <div class="sidebar-badge">INTELLIGENCE PLATFORM</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">OVERVIEW</div>
+                <a href="dashboard.html" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">INTELLIGENCE</div>
+                <a href="trip_invoice.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Cargo Input &amp; Invoice</a>
+                <a href="weather_forecast.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Weather Forecast</a>
+                <a href="vessel_match.html" class="sidebar-link active">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21l.4-2M22 21l-.4-2M6.09 19a14 14 0 0011.82 0"/><path d="M3 7l8-4 8 4"/><line x1="11" y1="3" x2="11" y2="19"/><path d="M3 7v6c0 3.31 3.58 6 8 6s8-2.69 8-6V7"/></svg>
+                    Vessel Match
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">DATA</div>
+                <a href="ports_network.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/></svg>Port Database</a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 21V9a9 9 0 009 9h6"/></svg>Trade Routes</a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Risk Alerts<span class="badge-count">3</span></a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="sidebarAvatar">N</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarName">User</div>
+                    <div class="sidebar-user-email" id="sidebarEmail">user@nexora.com</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div>
+                    <div class="topbar-title">Vessel Match Engine</div>
+                    <div class="topbar-breadcrumb">INTELLIGENCE / VESSEL RECOMMENDATION · <span id="dbStatus">Loading vessel database...</span></div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-status"><span class="topbar-dot"></span>SUPABASE LIVE</div>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <div class="vm-layout">
+
+                <!-- Query Form -->
+                <div class="qcard">
+                    <div class="qcard-hdr">
+                        <div class="qcard-icon">&#x1F6A2;</div>
+                        <div>
+                            <div class="qcard-title">Vessel Recommendation Query</div>
+                            <div class="qcard-sub">Select cargo, volume and ports. The engine will match real vessels from our database against both ports' draft depth, vessel size limits and entrance restrictions — then show ranked recommendations with full specs and estimated voyage cost.</div>
+                        </div>
+                    </div>
+
+                    <div class="fdiv"><hr><span>CARGO DETAILS</span><hr></div>
+                    <div class="form-grid" style="margin-top:16px">
+                        <div class="fg">
+                            <label>Cargo Type</label>
+                            <select id="cargoSel">
+                                <option value="" disabled selected>Select Cargo...</option>
+                                <option value="coal">Coal (Dry Bulk)</option>
+                                <option value="iron_ore">Iron Ore (Dry Bulk)</option>
+                                <option value="grain">Grain / Wheat (Dry Bulk)</option>
+                                <option value="fertilizer">Fertilizer (Dry Bulk)</option>
+                                <option value="bauxite">Bauxite / Alumina (Dry Bulk)</option>
+                                <option value="steel">Steel Coils / Pipes (Break Bulk)</option>
+                                <option value="logs">Timber / Logs (Break Bulk)</option>
+                                <option value="crude_oil">Crude Oil (Tanker)</option>
+                                <option value="lpg">LPG / LNG (Gas Tanker)</option>
+                                <option value="containers">Containers (General)</option>
+                            </select>
+                        </div>
+                        <div class="fg">
+                            <label>Cargo Volume (MT)</label>
+                            <input type="number" id="volInput" placeholder="e.g. 75000" min="1000" max="400000" />
+                        </div>
+                        <div class="fg">
+                            <label>Loading Month</label>
+                            <select id="monthSel">
+                                <option value="jan">January</option><option value="feb">February</option>
+                                <option value="mar">March</option><option value="apr">April</option>
+                                <option value="may">May</option><option value="jun">June</option>
+                                <option value="jul">July</option><option value="aug">August</option>
+                                <option value="sep" selected>September</option><option value="oct">October</option>
+                                <option value="nov">November</option><option value="dec">December</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="fdiv" style="margin-top:24px"><hr><span>PORT SELECTION</span><hr></div>
+                    <div class="form-grid" style="margin-top:16px">
+                        <div class="fg">
+                            <label>Origin Country</label>
+                            <select id="origCtry"><option value="" disabled selected>Loading...</option></select>
+                        </div>
+                        <div class="fg">
+                            <label>Origin Port</label>
+                            <select id="origPort" disabled><option value="" disabled selected>Select country first...</option></select>
+                        </div>
+                        <div class="fg">
+                            <label>Destination Country</label>
+                            <select id="destCtry"><option value="" disabled selected>Loading...</option></select>
+                        </div>
+                    </div>
+                    <div class="form-grid-2" style="margin-top:16px">
+                        <div class="fg">
+                            <label>Destination Port</label>
+                            <select id="destPort" disabled><option value="" disabled selected>Select country first...</option></select>
+                        </div>
+                    </div>
+
+                    <button class="abtn" id="analyzeBtn" onclick="runAnalysis()">
+                        <div class="spin" id="btnSpin"></div>
+                        <span id="btnTxt">&#x26A1; FIND MATCHING VESSELS</span>
+                    </button>
+                </div>
+
+                <!-- Results -->
+                <div id="ra">
+                    <div class="cstrip" id="cstrip"></div>
+                    <div class="rbar" id="rbar"></div>
+                    <div>
+                        <div class="slbl">&#x2605; BEST MATCHING VESSEL</div>
+                        <div class="best-wrap" id="bestCard"></div>
+                    </div>
+                    <div>
+                        <div class="slbl">OTHER COMPATIBLE VESSELS FROM DATABASE</div>
+                        <div class="alt-grid" id="altGrid"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Session
+    (function(){try{const sd=sessionStorage.getItem('nexora_user_data');if(sd){const u=JSON.parse(sd);const n=u.name||u.email.split('@')[0];document.getElementById('sidebarName').textContent=n;document.getElementById('sidebarEmail').textContent=u.email;const av=document.getElementById('sidebarAvatar');if(u.picture){av.textContent='';av.style.backgroundImage='url(\''+u.picture+'\')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';}else{av.textContent=n.charAt(0).toUpperCase();}}}catch(e){}})();
+    document.getElementById('mobileMenuBtn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+
+    const SB = 'https://rrgwnlfefzcstdtmpojt.supabase.co';
+    const AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ3dubGZlZnpjc3RkdG1wb2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Nzg3NzcsImV4cCI6MjEwNjE1NDc3N30.3Eae1B7rueWyrDAhDmGLoAbslEo1jiXAbKzA5_gYyBI';
+    const HDR = {'apikey':AK,'Authorization':'Bearer '+AK};
+
+    let allPorts=[], allVessels=[], selOrig=null, selDest=null;
+
+    async function sbFetch(table, params=''){
+        const r=await fetch(SB+'/rest/v1/'+table+'?'+params,{headers:HDR});
+        return r.json();
+    }
+
+    // Load ports & vessels in parallel
+    async function init(){
+        const [ports, vessels] = await Promise.all([
+            sbFetch('ports','select=*&limit=2000'),
+            sbFetch('vessels','select=*&limit=500')
+        ]);
+        allPorts = ports.filter(p=>p.wpi_port_name&&p.wpi_port_name.trim()!=='');
+        allVessels = vessels;
+        document.getElementById('dbStatus').textContent = allVessels.length+' vessels · '+allPorts.length+' ports loaded';
+
+        const countries=[...new Set(allPorts.map(p=>p.country).filter(Boolean))].sort();
+        const ch='<option value="" disabled selected>Select country...</option>'+countries.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+        document.getElementById('origCtry').innerHTML=ch;
+        document.getElementById('destCtry').innerHTML=ch;
+    }
+
+    function fillPorts(country,selId){
+        const pts=allPorts.filter(p=>p.country===country).sort((a,b)=>a.wpi_port_name.localeCompare(b.wpi_port_name));
+        const sel=document.getElementById(selId);
+        sel.innerHTML='<option value="" disabled selected>Select port...</option>'+pts.map(p=>'<option value="'+p.wpi_port_id+'">'+p.wpi_port_name+(p.state?' ('+p.state+')':'')+'</option>').join('');
+        sel.disabled=false;
+    }
+    document.getElementById('origCtry').addEventListener('change',e=>{selOrig=null;fillPorts(e.target.value,'origPort');});
+    document.getElementById('destCtry').addEventListener('change',e=>{selDest=null;fillPorts(e.target.value,'destPort');});
+    document.getElementById('origPort').addEventListener('change',e=>{selOrig=allPorts.find(p=>p.wpi_port_id==e.target.value)||null;});
+    document.getElementById('destPort').addEventListener('change',e=>{selDest=allPorts.find(p=>p.wpi_port_id==e.target.value)||null;});
+
+    function hav(la1,lo1,la2,lo2){const R=6371,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+
+    // Check if vessel can dock at a port
+    function canDock(vessel, port){
+        const reasons=[];
+        const portDepth = port.cargo_pier_depth_max_m;
+        if(portDepth && portDepth < vessel.min_depth_required){
+            reasons.push('Pier depth '+portDepth+'m < vessel needs '+vessel.min_depth_required+'m');
+        }
+        const ps=(port.max_vessel_size||'').toLowerCase();
+        if(ps){
+            const vesselDWT = vessel.dwt;
+            if(ps.includes('small')&&vesselDWT>45000) reasons.push('Port max: small vessels only');
+            else if(ps.includes('medium')&&vesselDWT>100000) reasons.push('Port max: medium vessels, vessel DWT '+Math.round(vesselDWT/1000)+'k exceeds limit');
+        }
+        return{ok:reasons.length===0,reasons};
+    }
+
+    function classTag(vessel){
+        const t=(vessel.ship_type||'').toLowerCase();
+        if(t.includes('bulk'))return'bulk';
+        if(t.includes('crude')||t.includes('tanker'))return'tanker';
+        if(t.includes('lng')||t.includes('lpg'))return'lng';
+        if(t.includes('container'))return'container';
+        return'bulk';
+    }
+
+    async function runAnalysis(){
+        const cargo=document.getElementById('cargoSel').value;
+        const vol=parseFloat(document.getElementById('volInput').value);
+        if(!cargo){alert('Please select cargo type.');return;}
+        if(!vol||isNaN(vol)){alert('Please enter cargo volume in MT.');return;}
+        if(!selOrig){alert('Please select origin port.');return;}
+        if(!selDest){alert('Please select destination port.');return;}
+
+        const btn=document.getElementById('analyzeBtn');
+        btn.disabled=true;btn.classList.add('loading');document.getElementById('btnTxt').textContent='SEARCHING DATABASE...';
+
+        await new Promise(r=>setTimeout(r,600));
+
+        const distKm=hav(selOrig.latitude,selOrig.longitude,selDest.latitude,selDest.longitude);
+        const distNm=Math.round(distKm*0.539957);
+
+        // Score all vessels from Supabase
+        const scored = allVessels.map(v=>{
+            let score=100, suitable=true;
+            const reasons=[];
+
+            // 1. Cargo compatibility
+            const compat = (v.cargo_compatibility||[]);
+            if(!compat.includes(cargo)){
+                suitable=false; score-=70;
+                reasons.push('Not compatible with '+cargo.replace(/_/g,' ')+' cargo');
+            }
+
+            // 2. Volume check
+            if(vol < v.dwt * 0.4){ score-=5; } // underutilised
+            if(vol > v.dwt){ suitable=false; score-=60; reasons.push('Cargo volume exceeds DWT capacity ('+Math.round(v.dwt/1000)+'k MT)'); }
+
+            // 3. Origin port dock check
+            const oc=canDock(v, selOrig);
+            if(!oc.ok){suitable=false;score-=45;reasons.push(...oc.reasons.map(r=>'Origin — '+r));}
+
+            // 4. Dest port dock check
+            const dc=canDock(v, selDest);
+            if(!dc.ok){suitable=false;score-=45;reasons.push(...dc.reasons.map(r=>'Dest — '+r));}
+
+            // 5. Age penalty
+            const age=2026-v.built_year;
+            if(age>20) score-=10;
+            else if(age<5) score+=8;
+
+            // 6. Route distance preference
+            if(distNm>8000&&v.dwt>150000) score+=8;
+            if(distNm<2000&&v.dwt<80000) score+=6;
+
+            // Estimated cost
+            const voyageDays = distNm / (v.speed_knots * 24);
+            const fuelCost = voyageDays * v.fuel_consumption_tpd * 650; // ~$650/ton bunker
+            const hireTotal = voyageDays * v.daily_rate_usd;
+            const totalCost = Math.round(fuelCost + hireTotal);
+
+            return{...v, score, suitable, reasons, voyageDays:Math.round(voyageDays), totalCost, fuelCost:Math.round(fuelCost), hireTotal:Math.round(hireTotal), age, distNm};
+        }).sort((a,b)=>b.score-a.score);
+
+        const suitableVessels = scored.filter(v=>v.suitable);
+        const best = suitableVessels.length>0 ? suitableVessels[0] : scored[0];
+        const alternatives = scored.filter(v=>v!==best).slice(0,8);
+
+        // Render constraint strip
+        document.getElementById('cstrip').innerHTML = mkCC(selOrig,'ORIGIN PORT') + mkCC(selDest,'DESTINATION PORT');
+
+        // Render route bar
+        document.getElementById('rbar').innerHTML =
+            '<div class="rbi"><div class="rbl">ROUTE</div><div class="rbv sm">'+selOrig.wpi_port_name+' &#8594; '+selDest.wpi_port_name+'</div></div>'+
+            '<div class="rbi"><div class="rbl">SEA DISTANCE</div><div class="rbv ac">'+distNm.toLocaleString()+' NM</div></div>'+
+            '<div class="rbi"><div class="rbl">CARGO TYPE</div><div class="rbv sm">'+cargo.replace(/_/g,' ').toUpperCase()+'</div></div>'+
+            '<div class="rbi"><div class="rbl">CARGO VOLUME</div><div class="rbv sm">'+vol.toLocaleString()+' MT</div></div>'+
+            '<div class="rbi"><div class="rbl">COMPATIBLE VESSELS</div><div class="rbv ac">'+suitableVessels.length+' / '+scored.length+'</div></div>';
+
+        // Render best card
+        document.getElementById('bestCard').innerHTML = mkBest(best, cargo, vol);
+
+        // Render alternatives
+        const altHtml = alternatives.length>0 ? alternatives.map(v=>mkAlt(v)).join('') :
+            '<div class="no-vessels" style="grid-column:1/-1">No other vessels found for this cargo and route combination.</div>';
+        document.getElementById('altGrid').innerHTML = altHtml;
+
+        document.getElementById('ra').classList.add('vis');
+        document.getElementById('ra').scrollIntoView({behavior:'smooth',block:'start'});
+
+        btn.disabled=false;btn.classList.remove('loading');document.getElementById('btnTxt').textContent='⚡ FIND MATCHING VESSELS';
+    }
+
+    function mkCC(port, lbl){
+        const depth=port.cargo_pier_depth_max_m, size=port.max_vessel_size||'Unknown', tidal=port.mean_tidal_range_m;
+        const rr=[];
+        if(port.entrance_restriction_tide)rr.push('Tide');
+        if(port.entrance_restriction_heavy_swell)rr.push('Swell');
+        if(port.entrance_restriction_ice)rr.push('Ice');
+        if(port.entrance_restriction_other)rr.push('Other');
+        return '<div class="ccard"><div class="ccard-lbl">'+lbl+'</div><div class="ccard-name">'+port.wpi_port_name+(port.state?', '+port.state:'')+'</div><div class="cpills">'+
+            '<span class="cp info">Depth: '+(depth?depth+'m':'Unknown')+'</span>'+
+            '<span class="cp info">Max size: '+size+'</span>'+
+            '<span class="cp info">Tidal: '+(tidal!==null?tidal+'m':'N/A')+'</span>'+
+            rr.map(r=>'<span class="cp warn">&#9888; '+r+' Restricted</span>').join('')+
+            (rr.length===0?'<span class="cp ok">&#10003; No Restrictions</span>':'')+
+            '</div></div>';
+    }
+
+    function fmtM(n){return '$'+Math.round(n/1000).toLocaleString()+'K';}
+
+    function mkBest(v, cargo, vol){
+        const tag = classTag(v);
+        const util = Math.round((vol/v.dwt)*100);
+        const reasonTxt = v.suitable
+            ? '<strong>Fully compatible.</strong> This vessel can dock at both ports, carries '+cargo.replace(/_/g,' ')+', and has adequate DWT capacity for your '+vol.toLocaleString()+' MT shipment at '+util+'% utilisation.'
+            : '<strong>Best available (with caveats).</strong> '+v.reasons.join('. ')+'.';
+        return '<div class="best-badge">&#9733; BEST MATCH · SCORE '+v.score+'</div>'+
+            '<div class="vname">'+v.ship_name+'</div>'+
+            '<div class="vtype">'+v.ship_type+' <span class="vclass-tag '+tag+'">'+v.vessel_class+'</span></div>'+
+            '<div class="spec-grid">'+
+            '<div class="spec"><div class="spec-lbl">DEADWEIGHT (DWT)</div><div class="spec-val">'+Math.round(v.dwt/1000).toLocaleString()+'K MT</div></div>'+
+            '<div class="spec"><div class="spec-lbl">LOA &times; BEAM</div><div class="spec-val">'+v.length+'m &times; '+v.width+'m</div></div>'+
+            '<div class="spec"><div class="spec-lbl">SERVICE SPEED</div><div class="spec-val">'+v.speed_knots+' kts</div></div>'+
+            '<div class="spec"><div class="spec-lbl">BUILT YEAR</div><div class="spec-val '+(v.age<10?'green':'')+'">'+v.built_year+' ('+v.age+'y)</div></div>'+
+            '<div class="spec"><div class="spec-lbl">MIN DRAFT REQUIRED</div><div class="spec-val blue">'+v.min_depth_required+'m</div></div>'+
+            '<div class="spec"><div class="spec-lbl">FUEL CONSUMPTION</div><div class="spec-val">'+v.fuel_consumption_tpd+' T/day</div></div>'+
+            '<div class="spec"><div class="spec-lbl">DAILY HIRE RATE</div><div class="spec-val ac">$'+v.daily_rate_usd.toLocaleString()+'/day</div></div>'+
+            '<div class="spec"><div class="spec-lbl">PORT TURNAROUND</div><div class="spec-val">'+v.turnaround_days+' days</div></div>'+
+            '</div>'+
+            '<div class="cost-bar">'+
+            '<div class="cost-item"><div class="cost-lbl">VOYAGE DURATION</div><div class="cost-val">'+v.voyageDays+' days</div></div>'+
+            '<div class="cost-item"><div class="cost-lbl">BUNKER FUEL COST</div><div class="cost-val">'+fmtM(v.fuelCost)+'</div></div>'+
+            '<div class="cost-item"><div class="cost-lbl">HIRE COST</div><div class="cost-val">'+fmtM(v.hireTotal)+'</div></div>'+
+            '<div class="cost-item"><div class="cost-lbl">ESTIMATED TOTAL COST</div><div class="cost-val" style="font-size:20px">'+fmtM(v.totalCost)+'</div></div>'+
+            '<div class="cost-item"><div class="cost-lbl">CARGO UTILISATION</div><div class="cost-val '+(util>80?'':'')+'">'+util+'%</div></div>'+
+            '</div>'+
+            '<div class="reason">'+reasonTxt+'</div>';
+    }
+
+    function mkAlt(v){
+        const tag=classTag(v);
+        const cls=v.suitable?'suit':'unsuit';
+        const compat=v.suitable?'<div class="alt-compat ok">&#10003; Compatible with route &amp; cargo</div>':'<div class="alt-compat no">&#10007; Not recommended</div>';
+        return '<div class="alt-card '+cls+'">'+
+            '<span class="vclass-tag '+tag+'" style="font-size:9px;padding:2px 8px">'+v.vessel_class+'</span>'+
+            '<div class="alt-name">'+v.ship_name+'</div>'+
+            '<div class="alt-type">'+v.ship_type+'</div>'+
+            compat+
+            '<div class="alt-specs">'+
+            '<div class="alt-spec"><span>DWT</span><span>'+Math.round(v.dwt/1000)+'K MT</span></div>'+
+            '<div class="alt-spec"><span>LOA &times; BEAM</span><span>'+v.length+'m &times; '+v.width+'m</span></div>'+
+            '<div class="alt-spec"><span>BUILT</span><span>'+v.built_year+' ('+v.age+'y old)</span></div>'+
+            '<div class="alt-spec"><span>FUEL</span><span>'+v.fuel_consumption_tpd+' T/day</span></div>'+
+            '<div class="alt-spec"><span>DAILY RATE</span><span>$'+v.daily_rate_usd.toLocaleString()+'</span></div>'+
+            '<div class="alt-spec"><span>EST. VOYAGE COST</span><span>'+fmtM(v.totalCost)+'</span></div>'+
+            '</div>'+
+            (!v.suitable&&v.reasons.length?'<div class="alt-reason">'+v.reasons.slice(0,2).join(' &middot; ')+'</div>':'')+
+            '</div>';
+    }
+
+    init();
+    </script>
+</body>
+</html>

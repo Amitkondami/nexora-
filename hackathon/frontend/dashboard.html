@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Dashboard — Nexora Freight Intelligence</title>
+    <meta name="description" content="Nexora Freight Intelligence Dashboard — freight forecasting, vessel optimization and chartering intelligence for bulk cargo.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+
+    <!-- Session Guard: Redirect to login if no active session -->
+    <script>
+        const sessionData = sessionStorage.getItem('nexora_user_data');
+        if (!sessionData) {
+            window.location.href = 'index.html';
+        }
+    </script>
+</head>
+
+<body>
+
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">NEXORA<span>FREIGHT</span></a>
+            <div class="sidebar-badge">INTELLIGENCE PLATFORM</div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">OVERVIEW</div>
+                <a href="dashboard.html" class="sidebar-link active" data-page="overview">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                    Dashboard
+                </a>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">INTELLIGENCE</div>
+                <a href="trip_invoice.html" class="sidebar-link" data-page="cargo">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                    Cargo Input &amp; Invoice
+                </a>
+                <a href="weather_forecast.html" class="sidebar-link" data-page="forecast">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Weather Forecast
+                </a>
+                <a href="vessel_match.html" class="sidebar-link" data-page="vessels">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 21l.4-2M22 21l-.4-2M6.09 19a14 14 0 0011.82 0"/>
+                        <path d="M3 7l8-4 8 4"/><line x1="11" y1="3" x2="11" y2="19"/>
+                        <path d="M3 7v6c0 3.31 3.58 6 8 6s8-2.69 8-6V7"/>
+                    </svg>
+                    Vessel Match
+                </a>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">DATA</div>
+                <a href="./ports_network.html" class="sidebar-link" data-page="ports">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/>
+                    </svg>
+                    Port Database
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user" id="sidebarUser">
+                <div class="sidebar-user-avatar" id="sidebarAvatar">N</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarName">User</div>
+                    <div class="sidebar-user-email" id="sidebarEmail">user@nexora.com</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <div class="topbar-title">Freight Intelligence</div>
+                    <div class="topbar-breadcrumb">DASHBOARD / OVERVIEW</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-status">
+                    <span class="topbar-dot"></span>
+                    MARKET DATA LIVE
+                </div>
+                <button class="topbar-btn" id="newQueryBtn">+ NEW QUERY</button>
+            </div>
+        </header>
+
+        <!-- Dashboard Content -->
+        <div class="dashboard-content">
+
+            <!-- Greeting -->
+            <div class="dashboard-greeting">
+                <h1 id="greetingText">Good afternoon</h1>
+                <p>Here's your freight market overview for India's East Coast corridors.</p>
+            </div>
+
+            <!-- Stats Row -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-label">AVG CAPESIZE RATE</div>
+                    <div class="stat-value">$18.4K</div>
+                    <div class="stat-change down">↓ 3.2% vs last week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AVG PANAMAX RATE</div>
+                    <div class="stat-value">$14.7K</div>
+                    <div class="stat-change up">↑ 1.8% vs last week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">AVG SUPRAMAX RATE</div>
+                    <div class="stat-value">$12.1K</div>
+                    <div class="stat-change down">↓ 0.6% vs last week</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">ACTIVE ROUTES TRACKED</div>
+                    <div class="stat-value">23</div>
+                    <div class="stat-change neutral">— No change</div>
+                </div>
+            </div>
+
+            <!-- Content Grid: Chart + Alerts -->
+            <div class="content-grid">
+
+                <!-- Freight Rate Chart -->
+                <div class="card">
+                    <div class="card-header">
+                        <div>
+                            <div class="card-title">📈 Freight Rate Trends</div>
+                            <div class="card-subtitle">CAPESIZE · AUSTRALIA → EAST COAST INDIA · 90 DAYS</div>
+                        </div>
+                        <button class="topbar-btn-ghost topbar-btn" style="font-size:11px;padding:6px 12px">View Full →</button>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-area">
+                            <canvas id="rateChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+
+    <script>
+        // ---- Greeting based on time ----
+        const hour = new Date().getHours();
+        const greetEl = document.getElementById('greetingText');
+        if (hour < 12) greetEl.textContent = 'Good morning';
+        else if (hour < 17) greetEl.textContent = 'Good afternoon';
+        else greetEl.textContent = 'Good evening';
+
+        // ---- Restore user session from landing page ----
+        const userData = sessionStorage.getItem('nexora_user_data');
+        const userEmail = sessionStorage.getItem('nexora_user');
+        if (userData) {
+            const u = JSON.parse(userData);
+            document.getElementById('sidebarName').textContent = u.name || u.email.split('@')[0];
+            document.getElementById('sidebarEmail').textContent = u.email;
+            const avatar = document.getElementById('sidebarAvatar');
+            if (u.picture) {
+                avatar.textContent = '';
+                avatar.style.backgroundImage = `url(${u.picture})`;
+            } else {
+                avatar.textContent = (u.name || u.email).charAt(0).toUpperCase();
+            }
+            greetEl.textContent += `, ${(u.name || u.email.split('@')[0]).split(' ')[0]}`;
+        } else if (userEmail) {
+            const name = userEmail.split('@')[0];
+            document.getElementById('sidebarName').textContent = name.charAt(0).toUpperCase() + name.slice(1);
+            document.getElementById('sidebarEmail').textContent = userEmail;
+            document.getElementById('sidebarAvatar').textContent = name.charAt(0).toUpperCase();
+            greetEl.textContent += `, ${name.charAt(0).toUpperCase() + name.slice(1)}`;
+        }
+
+        // ---- Mobile sidebar toggle ----
+        const sidebar = document.getElementById('sidebar');
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+        });
+
+        // ---- Sidebar active link ----
+        document.querySelectorAll('.sidebar-link').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href');
+                if (!href || href === '#') {
+                    e.preventDefault();
+                }
+                document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+
+        // ---- Freight Rate Chart ----
+        (function () {
+            const ctx = document.getElementById('rateChart');
+            if (!ctx) return;
+
+            // Simulated 90-day Capesize rate data (Australia → India)
+            const labels = [];
+            const rates = [];
+            const forecast = [];
+            let rate = 17200;
+            const today = new Date();
+
+            for (let i = -60; i <= 30; i++) {
+                const d = new Date(today);
+                d.setDate(d.getDate() + i);
+                labels.push(d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }));
+
+                if (i <= 0) {
+                    // Historical data with realistic volatility
+                    rate += (Math.random() - 0.48) * 600;
+                    rate = Math.max(14000, Math.min(22000, rate));
+                    rates.push(Math.round(rate));
+                    forecast.push(null);
+                } else {
+                    // Forecast (trending slightly down)
+                    rates.push(null);
+                    rate += (Math.random() - 0.52) * 400;
+                    rate = Math.max(14000, Math.min(22000, rate));
+                    forecast.push(Math.round(rate));
+                }
+            }
+
+            // Connect last historical point to first forecast point
+            forecast[60] = rates[60];
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            label: 'Historical Rate ($/day)',
+                            data: rates,
+                            borderColor: '#9F6B0A',
+                            backgroundColor: 'rgba(159, 107, 10, .08)',
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Forecast ($/day)',
+                            data: forecast,
+                            borderColor: 'rgba(159, 107, 10, .5)',
+                            borderDash: [6, 4],
+                            backgroundColor: 'rgba(159, 107, 10, .04)',
+                            fill: true,
+                            tension: 0.35,
+                            pointRadius: 0,
+                            pointHoverRadius: 5,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: {
+                        intersect: false,
+                        mode: 'index'
+                    },
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                color: '#989798',
+                                font: { family: "'JetBrains Mono', monospace", size: 10 },
+                                boxWidth: 20,
+                                boxHeight: 2,
+                                padding: 16
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15,14,13,.95)',
+                            borderColor: 'rgba(255,255,255,.1)',
+                            borderWidth: 1,
+                            titleFont: { family: "'JetBrains Mono', monospace", size: 11 },
+                            bodyFont: { family: "'Inter', sans-serif", size: 13 },
+                            titleColor: '#989798',
+                            bodyColor: '#FDFDFD',
+                            padding: 12,
+                            displayColors: false,
+                            callbacks: {
+                                label: function (ctx) {
+                                    if (ctx.parsed.y === null) return '';
+                                    return `$${ctx.parsed.y.toLocaleString()}/day`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: 'rgba(255,255,255,.04)', drawTicks: false },
+                            ticks: {
+                                color: '#666767',
+                                font: { family: "'JetBrains Mono', monospace", size: 9 },
+                                maxTicksLimit: 10,
+                                padding: 8
+                            },
+                            border: { color: 'rgba(255,255,255,.08)' }
+                        },
+                        y: {
+                            grid: { color: 'rgba(255,255,255,.04)', drawTicks: false },
+                            ticks: {
+                                color: '#666767',
+                                font: { family: "'JetBrains Mono', monospace", size: 10 },
+                                padding: 12,
+                                callback: v => '$' + (v / 1000).toFixed(1) + 'K'
+                            },
+                            border: { display: false }
+                        }
+                    }
+                }
+            });
+        })();
+        // --- User Session & UI Population ---
+        (function() {
+            try {
+                const sessionData = sessionStorage.getItem('nexora_user_data');
+                if (sessionData) {
+                    const user = JSON.parse(sessionData);
+                    const name = user.name || user.email.split('@')[0];
+                    const firstName = name.split(' ')[0];
+                    
+                    // Update Sidebar Profile
+                    document.getElementById('sidebarName').textContent = name;
+                    document.getElementById('sidebarEmail').textContent = user.email;
+                    
+                    const avatarEl = document.getElementById('sidebarAvatar');
+                    if (user.picture) {
+                        avatarEl.textContent = '';
+                        avatarEl.style.backgroundImage = `url('${user.picture}')`;
+                        avatarEl.style.backgroundSize = 'cover';
+                        avatarEl.style.backgroundPosition = 'center';
+                        avatarEl.classList.add('has-photo');
+                    } else {
+                        avatarEl.textContent = name.charAt(0).toUpperCase();
+                    }
+
+                    // Update Greeting based on time of day
+                    const hour = new Date().getHours();
+                    let greeting = 'Good evening';
+                    if (hour < 12) greeting = 'Good morning';
+                    else if (hour < 18) greeting = 'Good afternoon';
+                    
+                    document.getElementById('greetingText').textContent = `${greeting}, ${firstName}`;
+                }
+            } catch (e) {
+                console.error("Error parsing session data", e);
+            }
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Port Network & Routing — Nexora Freight</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <!-- Leaflet CSS for Maps -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+
+    <!-- Session Guard: inject demo session if none found so navigation works -->
+    <script>
+        let sessionData = sessionStorage.getItem('nexora_user_data');
+        if (!sessionData) {
+            const userEmail = sessionStorage.getItem('nexora_user');
+            if (!userEmail) {
+                sessionStorage.setItem('nexora_user_data', JSON.stringify({
+                    name: 'Demo User',
+                    email: 'demo.user@nexora.com',
+                    picture: null
+                }));
+            }
+        }
+    </script>
+
+    <style>
+        /* Map specific styles */
+        .map-layout {
+            display: flex;
+            height: calc(100vh - 70px);
+            width: 100%;
+            position: relative;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #0a0908;
+            z-index: 1;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            width: 380px;
+            background: rgba(15, 14, 13, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 8px;
+            padding: 24px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .control-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .control-section:last-of-type {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+        
+        .section-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: #e0e0e0;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group label {
+            font-size: 11px;
+            color: #989798;
+        }
+
+        .form-group select {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+            appearance: none;
+        }
+
+        .form-group select:focus {
+            border-color: rgba(159, 107, 10, 0.5);
+        }
+
+        .form-group select:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .route-btn {
+            background: #fdfdfd;
+            color: #040403;
+            border: none;
+            padding: 14px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 8px;
+        }
+
+        .route-btn:hover {
+            background: #e0e0e0;
+        }
+
+        .port-info-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            padding: 16px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .port-info-card.visible {
+            display: block;
+        }
+
+        .port-info-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .port-info-title span {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+
+        .port-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .port-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .port-stat span:first-child {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #666767;
+        }
+
+        .port-stat span:last-child {
+            font-size: 13px;
+            color: #e0e0e0;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Leaflet custom popup */
+        .leaflet-popup-content-wrapper {
+            background: #1a1a1a;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 4px;
+        }
+        .leaflet-popup-tip {
+            background: #1a1a1a;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- ============ SIDEBAR ============ -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">NEXORA<span>FREIGHT</span></a>
+            <div class="sidebar-badge">INTELLIGENCE PLATFORM</div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">OVERVIEW</div>
+                <a href="dashboard.html" class="sidebar-link" data-page="overview">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                    </svg>
+                    Dashboard
+                </a>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">INTELLIGENCE</div>
+                <a href="trip_invoice.html" class="sidebar-link" data-page="cargo">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/>
+                    </svg>
+                    Cargo Input &amp; Invoice
+                </a>
+                <a href="weather_forecast.html" class="sidebar-link" data-page="forecast">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+                    </svg>
+                    Weather Forecast
+                </a>
+                <a href="./vessel_match.html" class="sidebar-link" data-page="vessels">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 21l.4-2M22 21l-.4-2M6.09 19a14 14 0 0011.82 0"/>
+                        <path d="M3 7l8-4 8 4"/><line x1="11" y1="3" x2="11" y2="19"/>
+                        <path d="M3 7v6c0 3.31 3.58 6 8 6s8-2.69 8-6V7"/>
+                    </svg>
+                    Vessel Match
+                </a>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">DATA</div>
+                <a href="ports_network.html" class="sidebar-link active" data-page="ports">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/>
+                    </svg>
+                    Port Database
+                </a>
+                <a href="#" class="sidebar-link" data-page="routes">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/>
+                        <path d="M6 21V9a9 9 0 009 9h6"/>
+                    </svg>
+                    Trade Routes
+                </a>
+                <a href="#" class="sidebar-link" data-page="alerts">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+                    </svg>
+                    Risk Alerts
+                    <span class="badge-count">3</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-user" id="sidebarUser">
+                <div class="sidebar-user-avatar" id="sidebarAvatar">N</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarName">User</div>
+                    <div class="sidebar-user-email" id="sidebarEmail">user@nexora.com</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ============ MAIN ============ -->
+    <div class="main" style="padding: 0;">
+
+        <!-- Top Bar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                    </svg>
+                </button>
+                <div>
+                    <div class="topbar-title">Global Port Network</div>
+                    <div class="topbar-breadcrumb">DATA / ROUTES & PORTS (<span id="portCountLoading">Loading Dataset...</span>)</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Map Layout -->
+        <div class="map-layout">
+            <!-- Map Container -->
+            <div id="map"></div>
+
+            <!-- Floating Controls -->
+            <div class="map-controls">
+                
+                <!-- ORIGIN SECTION -->
+                <div class="control-section">
+                    <div class="section-title">ORIGIN</div>
+                    <div class="form-group">
+                        <label>Select Region (Loading)</label>
+                        <select id="originRegionSelect">
+                            <option value="" disabled selected>Loading Regions...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Port</label>
+                        <select id="originPortSelect" disabled>
+                            <option value="" disabled selected>Select Region First...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- DESTINATION SECTION -->
+                <div class="control-section">
+                    <div class="section-title">DESTINATION</div>
+                    <div class="form-group">
+                        <label>Select Region (Discharge)</label>
+                        <select id="destRegionSelect">
+                            <option value="" disabled selected>Loading Regions...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Select Port</label>
+                        <select id="destPortSelect" disabled>
+                            <option value="" disabled selected>Select Region First...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="route-btn" id="drawRouteBtn">CALCULATE ROUTE</button>
+
+                <!-- Information Cards (Dynamically Populated) -->
+                <div class="port-info-card" id="destInfoCard">
+                    <div class="port-info-title" id="destTitle"><span></span> Destination Constraints</div>
+                    <div class="port-stats">
+                        <div class="port-stat">
+                            <span>MAX DRAFT</span>
+                            <span id="destDraft">--</span>
+                        </div>
+                        <div class="port-stat">
+                            <span>MAX LOA / SIZE</span>
+                            <span id="destLoa">--</span>
+                        </div>
+                        <div class="port-stat">
+                            <span>TIDAL RANGE</span>
+                            <span id="destRate">--</span>
+                        </div>
+                        <div class="port-stat">
+                            <span>CONGESTION/RESTRICTION</span>
+                            <span id="destStatus">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Leaflet JS for Maps -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+    <script>
+        // --- User Session Logic ---
+        (function() {
+            try {
+                const sessionData = sessionStorage.getItem('nexora_user_data');
+                if (sessionData) {
+                    const user = JSON.parse(sessionData);
+                    const name = user.name || user.email.split('@')[0];
+                    
+                    document.getElementById('sidebarName').textContent = name;
+                    document.getElementById('sidebarEmail').textContent = user.email;
+                    
+                    const avatarEl = document.getElementById('sidebarAvatar');
+                    if (user.picture) {
+                        avatarEl.textContent = '';
+                        avatarEl.style.backgroundImage = `url('${user.picture}')`;
+                        avatarEl.style.backgroundSize = 'cover';
+                        avatarEl.style.backgroundPosition = 'center';
+                        avatarEl.classList.add('has-photo');
+                    } else {
+                        avatarEl.textContent = name.charAt(0).toUpperCase();
+                    }
+                }
+            } catch (e) {}
+        })();
+
+        // --- Map & Routing Logic ---
+        const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([20.0, 0.0], 2);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri',
+            maxZoom: 16
+        }).addTo(map);
+
+        let globalPorts = [];
+        let originLayer = L.layerGroup().addTo(map);
+        let destLayer = L.layerGroup().addTo(map);
+        let routeLayer = L.layerGroup().addTo(map);
+
+        // Load Global Shipping Lanes (Background Network)
+        fetch('Shipping_Lanes_v1.geojson')
+            .then(response => response.json())
+            .then(data => {
+                L.geoJSON(data, {
+                    style: {
+                        color: '#1e3a5f', // Deep ocean blue/gray
+                        weight: 1.5,
+                        opacity: 0.4,
+                        dashArray: '2, 4'
+                    }
+                }).addTo(map);
+                console.log("Global Shipping Lanes Loaded.");
+            })
+            .catch(error => console.error("Error loading shipping lanes:", error));
+
+        // Store selected port objects
+        let selectedOriginPort = null;
+        let selectedDestPort = null;
+
+        const oRegSelect = document.getElementById('originRegionSelect');
+        const oPortSelect = document.getElementById('originPortSelect');
+        const dRegSelect = document.getElementById('destRegionSelect');
+        const dPortSelect = document.getElementById('destPortSelect');
+
+        // 1. Fetch Dataset from Supabase and Populate Countries
+        const SUPABASE_URL = 'https://rrgwnlfefzcstdtmpojt.supabase.co';
+        // IMPORTANT: Replace 'YOUR_SUPABASE_ANON_KEY_HERE' with your actual anon key from Supabase Dashboard -> Settings -> API
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ3dubGZlZnpjc3RkdG1wb2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Nzg3NzcsImV4cCI6MjEwNjE1NDc3N30.3Eae1B7rueWyrDAhDmGLoAbslEo1jiXAbKzA5_gYyBI'; 
+        
+        fetch(`${SUPABASE_URL}/rest/v1/ports?select=*&limit=2000`, {
+            method: 'GET',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(response => {
+                if (!response.ok) throw new Error("Supabase fetch failed (check your ANON key)");
+                return response.json();
+            })
+            .then(data => {
+                // Supabase returns an array of rows directly
+                // Filter out ports with no name or null values
+                globalPorts = data.filter(p => p.wpi_port_name && p.wpi_port_name.trim() !== "");
+                
+                // Extract unique countries
+                const countries = [...new Set(globalPorts.map(p => p.country).filter(Boolean))].sort();
+                
+                let countryHtml = '<option value="" disabled selected>Select a Region...</option>';
+                countries.forEach(country => {
+                    countryHtml += `<option value="${country}">${country}</option>`;
+                });
+                
+                oRegSelect.innerHTML = countryHtml;
+                dRegSelect.innerHTML = countryHtml;
+                
+                document.getElementById('portCountLoading').textContent = `Ready - Loaded ${globalPorts.length} Ports`;
+            })
+            .catch(error => {
+                console.error("Error loading ports from Supabase:", error);
+                document.getElementById('portCountLoading').textContent = "Failed to load database (Did you add your Anon Key?)";
+                alert("Please add your Supabase 'anon' key to the javascript code in ports_network.html to fetch the data!");
+            });
+
+        // Helper: Plot regional ports and return bounds
+        function plotRegionalPorts(country, layerGroup, markerColor, portSelectDropdown) {
+            layerGroup.clearLayers();
+            
+            // Filter and sort ports for this region
+            const regionPorts = globalPorts.filter(p => p.country === country);
+            regionPorts.sort((a, b) => a.wpi_port_name.localeCompare(b.wpi_port_name));
+            
+            let optionsHtml = '<option value="" disabled selected>Select Port...</option>';
+            const bounds = [];
+
+            regionPorts.forEach((port) => {
+                if (!port.latitude || !port.longitude) return;
+
+                // Create map dot
+                const marker = L.circleMarker([port.latitude, port.longitude], {
+                    radius: 3,
+                    color: markerColor,
+                    fillColor: markerColor,
+                    fillOpacity: 0.6,
+                    weight: 1
+                }).bindPopup(`<b>${port.wpi_port_name}</b><br>Size: ${port.port_size}`);
+                
+                layerGroup.addLayer(marker);
+                bounds.push([port.latitude, port.longitude]);
+
+                // We store the global array index in a data attribute to retrieve it later,
+                // or we can stringify the object. Stringifying is easy for this scale.
+                const portDataStr = encodeURIComponent(JSON.stringify(port));
+                optionsHtml += `<option value="${portDataStr}">${port.wpi_port_name}</option>`;
+            });
+
+            portSelectDropdown.innerHTML = optionsHtml;
+            portSelectDropdown.disabled = false;
+
+            return bounds;
+        }
+
+        // 2. Load Origin Region Ports
+        oRegSelect.addEventListener('change', (e) => {
+            routeLayer.clearLayers(); // Clear old routes when changing regions
+            const bounds = plotRegionalPorts(e.target.value, originLayer, '#4285F4', oPortSelect);
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 5 });
+            
+            // Reset port selection
+            selectedOriginPort = null;
+        });
+
+        // 3. Load Destination Region Ports
+        dRegSelect.addEventListener('change', (e) => {
+            routeLayer.clearLayers(); // Clear old routes when changing regions
+            const bounds = plotRegionalPorts(e.target.value, destLayer, '#EA4335', dPortSelect);
+            if (bounds.length > 0) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 5 });
+            
+            // Reset port selection
+            selectedDestPort = null;
+        });
+        
+        // Track Port Selections
+        oPortSelect.addEventListener('change', (e) => {
+            selectedOriginPort = JSON.parse(decodeURIComponent(e.target.value));
+        });
+        
+        dPortSelect.addEventListener('change', (e) => {
+            selectedDestPort = JSON.parse(decodeURIComponent(e.target.value));
+        });
+
+        // 4. Draw Route Function
+        document.getElementById('drawRouteBtn').addEventListener('click', async () => {
+            if (!selectedOriginPort || !selectedDestPort) {
+                alert("Please select both an Origin Port and a Destination Port.");
+                return;
+            }
+
+            // Clear regional dots and old routes
+            originLayer.clearLayers();
+            destLayer.clearLayers();
+            routeLayer.clearLayers();
+
+            const origin = selectedOriginPort;
+            const dest = selectedDestPort;
+
+            // Highlight Origin
+            L.circleMarker([origin.latitude, origin.longitude], {
+                color: '#4285F4', fillColor: '#4285F4', fillOpacity: 0.9, radius: 8, weight: 2
+            }).bindPopup(`<b>${origin.wpi_port_name} (Origin)</b>`).addTo(routeLayer);
+            
+            // Highlight Dest
+            L.circleMarker([dest.latitude, dest.longitude], {
+                color: '#EA4335', fillColor: '#EA4335', fillOpacity: 0.9, radius: 8, weight: 2
+            }).bindPopup(`<b>${dest.wpi_port_name} (Destination)</b>`).addTo(routeLayer);
+
+            // Fetch True Sea Route from Python Backend API
+            document.getElementById('drawRouteBtn').textContent = "CALCULATING...";
+            try {
+                const url = `http://localhost:8000/api/route?olon=${origin.longitude}&olat=${origin.latitude}&dlon=${dest.longitude}&dlat=${dest.latitude}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) throw new Error("Routing failed");
+                const routeGeoJSON = await response.json();
+
+                // Draw the true route line
+                const routeLine = L.geoJSON(routeGeoJSON, {
+                    style: {
+                        color: '#EAB308', // Brighter Gold 
+                        weight: 4, 
+                        dashArray: '8, 8', 
+                        opacity: 0.9,
+                        lineJoin: 'round'
+                    }
+                }).addTo(routeLayer);
+
+                // Animate Map Zoom
+                try {
+                    map.fitBounds(routeLine.getBounds(), { padding: [100, 100], maxZoom: 5, duration: 1.5 });
+                } catch (e) {}
+
+            } catch (err) {
+                console.error(err);
+                alert("Failed to calculate global sea route. Ensure the Python server is running.");
+            } finally {
+                document.getElementById('drawRouteBtn').textContent = "CALCULATE ROUTE";
+            }
+
+            // Update UI Information Card
+            document.getElementById('destTitle').innerHTML = `<span style="background: #EA4335"></span> ${dest.wpi_port_name} Constraints`;
+            document.getElementById('destDraft').textContent = dest.cargo_pier_depth_max_m ? dest.cargo_pier_depth_max_m + 'm' : 'Unknown';
+            document.getElementById('destLoa').textContent = dest.max_vessel_size ? dest.max_vessel_size.toUpperCase() : 'Unknown';
+            document.getElementById('destRate').textContent = dest.mean_tidal_range_m ? dest.mean_tidal_range_m + 'm' : 'N/A';
+            
+            const statusEl = document.getElementById('destStatus');
+            const hasCongestion = dest.entrance_restriction_other ? "Congestion / Restriction Warning" : "Clear (No Queue)";
+            const statusColor = dest.entrance_restriction_other ? "#FBBC05" : "#34A853";
+            
+            statusEl.textContent = hasCongestion;
+            statusEl.style.color = statusColor;
+
+            document.getElementById('destInfoCard').classList.add('visible');
+        });
+    </script>
+</body>
+</html>

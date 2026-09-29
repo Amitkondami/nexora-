@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Weather Forecast — Nexora Freight Intelligence</title>
+    <meta name="description" content="Route weather and sea-state forecasting for maritime routes.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <script>
+        let sd = sessionStorage.getItem('nexora_user_data');
+        if (!sd) {
+            sessionStorage.setItem('nexora_user_data', JSON.stringify({name:'Demo User',email:'demo.user@nexora.com',picture:null}));
+        }
+    </script>
+    <style>
+        .wf-layout { display: flex; flex-direction: column; gap: 24px; max-width: 1400px; margin: 0 auto; width: 100%; height: calc(100vh - 120px); }
+        .wf-grid { display: grid; grid-template-columns: 380px 1fr; gap: 24px; height: 100%; }
+        @media(max-width:1000px) { .wf-grid { grid-template-columns: 1fr; grid-template-rows: auto 500px; height: auto; } .wf-layout { height: auto; } }
+
+        /* Left Panel */
+        .panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+        .panel-hdr { padding: 20px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 14px; }
+        .panel-icon { width: 36px; height: 36px; background: rgba(52, 211, 153, 0.1); border: 1px solid rgba(52, 211, 153, 0.3); color: #34d399; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+        .panel-title { font-size: 16px; font-weight: 700; color: var(--off); }
+        .panel-body { padding: 24px; overflow-y: auto; flex: 1; }
+
+        .fg { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+        .fg label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-sec); letter-spacing: 0.5px; text-transform: uppercase; }
+        .fg select, .fg input { background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 6px; color: var(--off); padding: 11px 14px; font-family: 'Inter', sans-serif; font-size: 13px; outline: none; width: 100%; appearance: none; }
+        .fg select:focus, .fg input:focus { border-color: rgba(52, 211, 153, 0.6); background: rgba(52, 211, 153, 0.05); }
+        .fg select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn { background: var(--off); color: #040403; border: none; border-radius: 6px; padding: 14px 20px; font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 10px; }
+        .btn:hover { background: #e0e0e0; transform: translateY(-1px); }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+        .spinner { width: 14px; height: 14px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #040403; border-radius: 50%; animation: spin 0.7s linear infinite; display: none; }
+        .btn.loading .spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Results Area */
+        #results { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--border); display: none; flex-direction: column; gap: 16px; animation: fadeUp 0.4s ease; }
+        #results.vis { display: flex; }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+        
+        .stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+        .stat-hdr { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+        .stat-val { font-size: 18px; font-weight: 700; color: var(--off); }
+        .stat-val.warn { color: #f59e0b; }
+        .stat-val.bad { color: #ef4444; }
+        .stat-val.ok { color: #34d399; }
+        
+        .point-card { background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 12px; margin-top: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 6px; }
+        .point-hdr { display: flex; justify-content: space-between; font-weight: 600; color: var(--off); }
+        .point-metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px 12px;
+            color: var(--text-sec);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            margin-top: 4px;
+            background: rgba(255,255,255,0.02);
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid rgba(255,255,255,0.04);
+        }
+        .metric-cell {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .metric-label {
+            color: var(--muted);
+            font-size: 10px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .metric-val {
+            color: var(--off);
+            font-weight: 600;
+        }
+        .badge { padding: 2px 6px; border-radius: 4px; font-size: 9px; font-weight: 700; }
+        .badge.safe { background: rgba(52,211,153,0.15); color: #34d399; }
+        .badge.rough { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .badge.danger { background: rgba(239,68,68,0.15); color: #ef4444; }
+        
+        .hide-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
+        .hide-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+        /* Right Panel - Map */
+        #map { width: 100%; height: 100%; border-radius: 12px; background: #080807; z-index: 1; }
+        .leaflet-container { font-family: 'Inter', sans-serif; }
+        .leaflet-popup-content-wrapper { background: var(--bg-card); color: var(--off); border: 1px solid var(--border); border-radius: 8px; }
+        .leaflet-popup-tip { background: var(--bg-card); border: 1px solid var(--border); }
+        
+        .weather-icon { width: 24px; height: 24px; background: var(--bg-card); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 0 10px rgba(0,0,0,0.5); }
+        .weather-icon.safe { border: 2px solid #34d399; color: #34d399; }
+        .weather-icon.rough { border: 2px solid #f59e0b; color: #f59e0b; }
+        .weather-icon.danger { border: 2px solid #ef4444; color: #ef4444; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">NEXORA<span>FREIGHT</span></a>
+            <div class="sidebar-badge">INTELLIGENCE PLATFORM</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">OVERVIEW</div>
+                <a href="dashboard.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>Dashboard</a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">INTELLIGENCE</div>
+                <a href="trip_invoice.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>Cargo Input &amp; Invoice</a>
+                <a href="weather_forecast.html" class="sidebar-link active"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Weather Forecast</a>
+                <a href="vessel_match.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21l.4-2M22 21l-.4-2M6.09 19a14 14 0 0011.82 0"/><path d="M3 7l8-4 8 4"/><line x1="11" y1="3" x2="11" y2="19"/><path d="M3 7v6c0 3.31 3.58 6 8 6s8-2.69 8-6V7"/></svg>Vessel Match</a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">DATA</div>
+                <a href="ports_network.html" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/></svg>Port Database</a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 21V9a9 9 0 009 9h6"/></svg>Trade Routes</a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Risk Alerts<span class="badge-count">3</span></a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="sidebarAvatar">N</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarName">User</div>
+                    <div class="sidebar-user-email" id="sidebarEmail">user@nexora.com</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div>
+                    <div class="topbar-title">Marine Weather &amp; Sea State Forecast</div>
+                    <div class="topbar-breadcrumb">INTELLIGENCE / WEATHER FORECAST</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-status"><span class="topbar-dot" style="background:#34d399"></span>OPEN-METEO LIVE</div>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <div class="wf-layout">
+                <div class="wf-grid">
+                    
+                    <!-- Left Column -->
+                    <div style="display:flex; flex-direction:column; gap:24px; height:100%; overflow-y:auto; padding-right:4px;" class="hide-scroll">
+                        <div class="panel" style="flex:none;">
+                            <div class="panel-hdr">
+                                <div class="panel-icon">&#x26C8;</div>
+                                <div>
+                                    <div class="panel-title">Route Planner</div>
+                                    <div style="font-size:12px; color:var(--text-sec)">Select ports to check route weather</div>
+                                </div>
+                            </div>
+                            <div class="panel-body" style="padding-bottom:16px;">
+                                <div class="fg">
+                                    <label>Origin Country</label>
+                                    <select id="origCtry"><option value="" disabled selected>Loading...</option></select>
+                                </div>
+                                <div class="fg">
+                                    <label>Origin Port</label>
+                                    <select id="origPort" disabled><option value="" disabled selected>Select country first...</option></select>
+                                </div>
+                                
+                                <div style="text-align:center; color:var(--border); margin: 4px 0">&#x2193;</div>
+
+                                <div class="fg">
+                                    <label>Destination Country</label>
+                                    <select id="destCtry"><option value="" disabled selected>Loading...</option></select>
+                                </div>
+                                <div class="fg">
+                                    <label>Destination Port</label>
+                                    <select id="destPort" disabled><option value="" disabled selected>Select country first...</option></select>
+                                </div>
+
+                                <button class="btn" id="analyzeBtn" onclick="runWeatherCheck()">
+                                    <div class="spinner" id="btnSpin"></div>
+                                    <span id="btnTxt">CHECK MARINE WEATHER</span>
+                                </button>
+
+                                <!-- Results display -->
+                                <div id="results">
+                                    <div class="stat-card" style="margin-top:20px;">
+                                        <div class="stat-hdr">ROUTE STATUS</div>
+                                        <div class="stat-val" id="routeStatus">--</div>
+                                        <div style="font-size:12px; color:var(--text-sec); margin-top:6px;" id="routeDesc">--</div>
+                                    </div>
+                                    
+                                    <div style="margin-top:16px;">
+                                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;">7-DAY ROUTE OUTLOOK</div>
+                                        <div style="display:flex; gap:8px; overflow-x:auto; padding-bottom:8px;" id="sevenDayContainer" class="hide-scroll"></div>
+                                    </div>
+                                    
+                                    <div style="margin-top:8px;">
+                                        <div style="font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--muted);margin-bottom:8px;">SAMPLED WAYPOINTS (CURRENT)</div>
+                                        <div id="waypointsContainer"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Global Alerts Panel -->
+                        <div class="panel" style="flex:1;">
+                            <div class="panel-hdr">
+                                <div class="panel-icon" style="background:rgba(239,68,68,0.1); color:#ef4444; border-color:rgba(239,68,68,0.3)">&#x26A0;</div>
+                                <div>
+                                    <div class="panel-title">Global Ocean Alerts</div>
+                                    <div style="font-size:12px; color:var(--text-sec)">Live monitoring of critical maritime zones</div>
+                                </div>
+                            </div>
+                            <div class="panel-body" id="globalAlertsContainer" style="padding:16px;">
+                                <div style="text-align:center; color:var(--text-sec); font-size:13px; margin-top:30px;">
+                                    <div class="spinner" style="display:inline-block; border-top-color:#ef4444; margin-bottom:14px; animation-duration:1s;"></div><br>
+                                    Scanning global oceans for severe weather...
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Panel (Map) -->
+                    <div id="map"></div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        // Session
+        (function(){try{const sd=sessionStorage.getItem('nexora_user_data');if(sd){const u=JSON.parse(sd);const n=u.name||u.email.split('@')[0];document.getElementById('sidebarName').textContent=n;document.getElementById('sidebarEmail').textContent=u.email;const av=document.getElementById('sidebarAvatar');if(u.picture){av.textContent='';av.style.backgroundImage='url(\''+u.picture+'\')';av.style.backgroundSize='cover';av.style.backgroundPosition='center';}else{av.textContent=n.charAt(0).toUpperCase();}}}catch(e){}})();
+        document.getElementById('mobileMenuBtn').addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('open'));
+
+        // Map Setup
+        const map = L.map('map').setView([15, 60], 3);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16
+        }).addTo(map);
+
+        let routeLayer = L.featureGroup().addTo(map);
+        let markersLayer = L.featureGroup().addTo(map);
+
+        // Load Ports from Supabase
+        const SB = 'https://rrgwnlfefzcstdtmpojt.supabase.co';
+        const AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ3dubGZlZnpjc3RkdG1wb2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Nzg3NzcsImV4cCI6MjEwNjE1NDc3N30.3Eae1B7rueWyrDAhDmGLoAbslEo1jiXAbKzA5_gYyBI';
+        let allPorts=[], selOrig=null, selDest=null;
+
+        async function init(){
+            try {
+                const res = await fetch(SB+'/rest/v1/ports?select=*&limit=2000',{headers:{'apikey':AK,'Authorization':'Bearer '+AK}});
+                allPorts = await res.json();
+                allPorts = allPorts.filter(p=>p.wpi_port_name&&p.wpi_port_name.trim()!=='');
+
+                const countries=[...new Set(allPorts.map(p=>p.country).filter(Boolean))].sort();
+                const ch='<option value="" disabled selected>Select country...</option>'+countries.map(c=>'<option value="'+c+'">'+c+'</option>').join('');
+                document.getElementById('origCtry').innerHTML=ch;
+                document.getElementById('destCtry').innerHTML=ch;
+            } catch(e) { console.error('Failed to load ports'); }
+        }
+
+        function fillPorts(country,selId){
+            const pts=allPorts.filter(p=>p.country===country).sort((a,b)=>a.wpi_port_name.localeCompare(b.wpi_port_name));
+            const sel=document.getElementById(selId);
+            sel.innerHTML='<option value="" disabled selected>Select port...</option>'+pts.map(p=>'<option value="'+p.wpi_port_id+'">'+p.wpi_port_name+(p.state?' ('+p.state+')':'')+'</option>').join('');
+            sel.disabled=false;
+        }
+        document.getElementById('origCtry').addEventListener('change',e=>{selOrig=null;fillPorts(e.target.value,'origPort');});
+        document.getElementById('destCtry').addEventListener('change',e=>{selDest=null;fillPorts(e.target.value,'destPort');});
+        document.getElementById('origPort').addEventListener('change',e=>{selOrig=allPorts.find(p=>p.wpi_port_id==e.target.value)||null;});
+        document.getElementById('destPort').addEventListener('change',e=>{selDest=allPorts.find(p=>p.wpi_port_id==e.target.value)||null;});
+
+        init();
+        scanGlobalOceans();
+
+        async function scanGlobalOceans() {
+            const zones = [
+                { name: 'Cape of Good Hope', lat: -35.5, lon: 20.0 },
+                { name: 'Drake Passage', lat: -58.5, lon: -62.0 },
+                { name: 'North Atlantic', lat: 50.0, lon: -30.0 },
+                { name: 'South China Sea', lat: 15.0, lon: 115.0 },
+                { name: 'Bay of Bengal', lat: 15.0, lon: 90.0 },
+                { name: 'Bering Sea', lat: 58.0, lon: -175.0 },
+                { name: 'Gulf of Alaska', lat: 55.0, lon: -145.0 },
+                { name: 'Arabian Sea', lat: 15.0, lon: 65.0 }
+            ];
+
+            try {
+                const promises = zones.map(async z => {
+                    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${z.lat}&longitude=${z.lon}&current=wave_height,wave_period,swell_wave_height,ocean_current_velocity&timezone=auto`;
+                    const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${z.lat}&longitude=${z.lon}&current=wind_speed_10m,wind_gusts_10m,visibility&timezone=auto`;
+
+                    const [mRes, fRes] = await Promise.all([
+                        fetch(marineUrl).then(r => r.json()).catch(() => ({})),
+                        fetch(forecastUrl).then(r => r.json()).catch(() => ({}))
+                    ]);
+
+                    const wave_height = Math.round((mRes.current?.wave_height || 0) * 10) / 10;
+                    const wave_period = Math.round((mRes.current?.wave_period || 0) * 10) / 10;
+                    const swell = Math.round((mRes.current?.swell_wave_height || 0) * 10) / 10;
+                    const current = Math.round((mRes.current?.ocean_current_velocity || 0) * 10) / 10;
+                    const wind = Math.round((fRes.current?.wind_speed_10m || 0) * 10) / 10;
+                    const gusts = Math.round((fRes.current?.wind_gusts_10m || 0) * 10) / 10;
+                    const visibility = fRes.current?.visibility ? Math.round(fRes.current.visibility / 1000) : 20;
+
+                    return {
+                        ...z,
+                        wave_height,
+                        wave_period,
+                        swell,
+                        current,
+                        wind,
+                        gusts,
+                        visibility
+                    };
+                });
+
+                const results = await Promise.all(promises);
+                
+                // Filter critical alerts: wave > 3.0m OR wind > 40 km/h OR gusts > 60 km/h OR visibility < 3 km
+                const alerts = results.filter(r => r.wave_height > 3.0 || r.wind > 40 || r.gusts > 60 || r.visibility < 3.0)
+                                      .sort((a,b) => b.wave_height - a.wave_height);
+
+                const container = document.getElementById('globalAlertsContainer');
+                
+                if (alerts.length === 0) {
+                    container.innerHTML = '<div style="text-align:center; padding:20px; color:var(--text-sec); font-size:13px;">&#10003; No critical ocean alerts worldwide at this time. All major zones calm.</div>';
+                    return;
+                }
+
+                let html = '';
+                alerts.forEach(al => {
+                    const isSevere = al.wave_height > 5.0 || al.wind > 60 || al.gusts > 80 || al.visibility < 1.5;
+                    const bColor = isSevere ? '#ef4444' : '#f59e0b';
+                    const bBg = isSevere ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)';
+                    
+                    html += `
+                        <div class="point-card" style="border-left:3px solid ${bColor}; cursor:pointer; transition:transform 0.2s;" onclick="flyToAlert(${al.lat}, ${al.lon}, '${al.name}', ${al.wave_height}, ${al.wave_period}, ${al.swell}, ${al.wind}, ${al.gusts}, ${al.current}, ${al.visibility})" onmouseover="this.style.transform='translateX(4px)'" onmouseout="this.style.transform='none'">
+                            <div class="point-hdr">
+                                <span>${al.name}</span>
+                                <span class="badge" style="background:${bBg}; color:${bColor};">${isSevere ? 'SEVERE ALERT' : 'ROUGH SEAS'}</span>
+                            </div>
+                            <div class="point-metrics-grid">
+                                <div class="metric-cell">
+                                    <span class="metric-label">🌊 Waves</span>
+                                    <span class="metric-val">${al.wave_height}m <small style="color:var(--muted); font-size:9px;">(${al.wave_period}s)</small></span>
+                                </div>
+                                <div class="metric-cell">
+                                    <span class="metric-label">💨 Wind</span>
+                                    <span class="metric-val">${al.wind} km/h</span>
+                                </div>
+                                <div class="metric-cell">
+                                    <span class="metric-label">🌊 Swell</span>
+                                    <span class="metric-val">${al.swell}m</span>
+                                </div>
+                                <div class="metric-cell">
+                                    <span class="metric-label">🧭 Current</span>
+                                    <span class="metric-val">${al.current} km/h</span>
+                                </div>
+                                <div class="metric-cell" style="grid-column: span 2;">
+                                    <span class="metric-label">💨 Gusts: <b style="color:var(--off)">${al.gusts} km/h</b></span>
+                                    <span class="metric-label">👁 Vis: <b style="color:var(--off)">${al.visibility} km</b></span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add global alert markers to map
+                    const iconHtml = `<div class="weather-icon danger" style="border-color:${bColor}; color:${bColor}; animation: pulse 2s infinite;">⚠</div>`;
+                    const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+                    
+                    const popupHtml = `
+                        <div style="font-family:'Inter',sans-serif; min-width:180px;">
+                            <div style="font-weight:700; font-size:13px; margin-bottom:6px; color:#fff;">${al.name}</div>
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#a1a1aa; display:flex; flex-direction:column; gap:3px;">
+                                <div>🌊 Waves: <b style="color:#fff;">${al.wave_height}m</b> (${al.wave_period}s)</div>
+                                <div>🌊 Swell: <b style="color:#fff;">${al.swell}m</b></div>
+                                <div>💨 Wind: <b style="color:#fff;">${al.wind} km/h</b> (Gusts: ${al.gusts} km/h)</div>
+                                <div>🧭 Current: <b style="color:#fff;">${al.current} km/h</b></div>
+                                <div>👁 Visibility: <b style="color:#fff;">${al.visibility} km</b></div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    L.marker([al.lat, al.lon], {icon: customIcon})
+                        .bindPopup(popupHtml)
+                        .addTo(markersLayer);
+                });
+
+                container.innerHTML = html;
+
+            } catch (e) {
+                console.error(e);
+                document.getElementById('globalAlertsContainer').innerHTML = '<div style="color:#ef4444; font-size:12px;">Failed to load global alerts.</div>';
+            }
+        }
+
+        window.flyToAlert = function(lat, lon, name, wave, period, swell, wind, gusts, current, vis) {
+            map.flyTo([lat, lon], 4, { duration: 1.5 });
+            setTimeout(() => {
+                const content = `
+                    <div style="font-family:'Inter',sans-serif; min-width:190px;">
+                        <div style="font-weight:700; font-size:13px; margin-bottom:6px; color:#fff;">${name}</div>
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#a1a1aa; display:flex; flex-direction:column; gap:3px;">
+                            <div>🌊 Waves: <b style="color:#fff;">${wave}m</b> (${period}s)</div>
+                            <div>🌊 Swell: <b style="color:#fff;">${swell}m</b></div>
+                            <div>💨 Wind: <b style="color:#fff;">${wind} km/h</b> (Gusts: ${gusts} km/h)</div>
+                            <div>🧭 Current: <b style="color:#fff;">${current} km/h</b></div>
+                            <div>👁 Visibility: <b style="color:#fff;">${vis} km</b></div>
+                        </div>
+                    </div>
+                `;
+                L.popup().setLatLng([lat, lon]).setContent(content).openOn(map);
+            }, 1500);
+        };
+
+        // Weather Analysis
+        async function runWeatherCheck() {
+            if(!selOrig || !selDest){ alert('Please select origin and destination ports.'); return; }
+            
+            const btn=document.getElementById('analyzeBtn');
+            btn.disabled=true; btn.classList.add('loading');
+            document.getElementById('btnTxt').textContent = 'CALCULATING ROUTE...';
+
+            routeLayer.clearLayers();
+            markersLayer.clearLayers();
+            document.getElementById('results').classList.remove('vis');
+
+            try {
+                // 1. Fetch physical route from Python backend
+                const url = `http://localhost:8000/api/route?olon=${selOrig.longitude}&olat=${selOrig.latitude}&dlon=${selDest.longitude}&dlat=${selDest.latitude}`;
+                const routeRes = await fetch(url);
+                if(!routeRes.ok) throw new Error('Routing failed');
+                const routeGeoJSON = await routeRes.json();
+                
+                // Draw route
+                const routeLine = L.geoJSON(routeGeoJSON, {
+                    style: { color: 'rgba(255, 255, 255, 0.4)', weight: 3, dashArray: '5, 10' }
+                }).addTo(routeLayer);
+                
+                map.fitBounds(routeLine.getBounds(), { padding: [50,50] });
+
+                // Add origin and dest markers
+                L.circleMarker([selOrig.latitude, selOrig.longitude], { color: '#4ade80', radius: 6, weight: 2 }).bindPopup('Origin: '+selOrig.wpi_port_name).addTo(markersLayer);
+                L.circleMarker([selDest.latitude, selDest.longitude], { color: '#818cf8', radius: 6, weight: 2 }).bindPopup('Dest: '+selDest.wpi_port_name).addTo(markersLayer);
+
+                // 2. Sample 4 waypoints along the route
+                const coords = routeGeoJSON.geometry ? routeGeoJSON.geometry.coordinates : (routeGeoJSON.features ? routeGeoJSON.features[0].geometry.coordinates : routeGeoJSON.coordinates);
+                const waypoints = [
+                    coords[Math.floor(coords.length * 0.2)], // 20%
+                    coords[Math.floor(coords.length * 0.4)], // 40%
+                    coords[Math.floor(coords.length * 0.6)], // 60%
+                    coords[Math.floor(coords.length * 0.8)]  // 80%
+                ];
+
+                document.getElementById('btnTxt').textContent = 'FETCHING MULTI-FACTOR WEATHER...';
+
+                // 3. Fetch both Marine and Atmospheric weather from Open-Meteo for each waypoint (7-day forecast)
+                const weatherPromises = waypoints.map(async (coord, idx) => {
+                    const lon = coord[0], lat = coord[1];
+                    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&hourly=wave_height,wave_period,swell_wave_height,ocean_current_velocity&timezone=auto`;
+                    const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=wind_speed_10m,wind_gusts_10m,visibility&timezone=auto`;
+
+                    const [mData, fData] = await Promise.all([
+                        fetch(marineUrl).then(r => r.json()).catch(() => ({})),
+                        fetch(forecastUrl).then(r => r.json()).catch(() => ({}))
+                    ]);
+
+                    const dailyForecast = [];
+                    const hourlyWaves = mData.hourly?.wave_height || [];
+                    const hourlyPeriods = mData.hourly?.wave_period || [];
+                    const hourlySwells = mData.hourly?.swell_wave_height || [];
+                    const hourlyCurrents = mData.hourly?.ocean_current_velocity || [];
+
+                    const hourlyWinds = fData.hourly?.wind_speed_10m || [];
+                    const hourlyGusts = fData.hourly?.wind_gusts_10m || [];
+                    const hourlyVis = fData.hourly?.visibility || [];
+
+                    for(let d=0; d<7; d++) {
+                        const start = d * 24, end = (d + 1) * 24;
+
+                        const chunkW = hourlyWaves.slice(start, end).filter(v => v !== null);
+                        const chunkP = hourlyPeriods.slice(start, end).filter(v => v !== null);
+                        const chunkSw = hourlySwells.slice(start, end).filter(v => v !== null);
+                        const chunkC = hourlyCurrents.slice(start, end).filter(v => v !== null);
+
+                        const chunkWind = hourlyWinds.slice(start, end).filter(v => v !== null);
+                        const chunkG = hourlyGusts.slice(start, end).filter(v => v !== null);
+                        const chunkVis = hourlyVis.slice(start, end).filter(v => v !== null);
+
+                        const maxWave = chunkW.length ? Math.max(...chunkW) : 0;
+                        const avgPeriod = chunkP.length ? Math.round(chunkP.reduce((a,b)=>a+b, 0) / chunkP.length) : 0;
+                        const maxSwell = chunkSw.length ? Math.max(...chunkSw) : 0;
+                        const maxCurrent = chunkC.length ? Math.max(...chunkC) : 0;
+
+                        const maxWind = chunkWind.length ? Math.max(...chunkWind) : 0;
+                        const maxGust = chunkG.length ? Math.max(...chunkG) : 0;
+                        const minVis = chunkVis.length ? Math.round(Math.min(...chunkVis) / 1000) : 20;
+
+                        const dateStr = (mData.hourly?.time?.[start] || fData.hourly?.time?.[start] || '').split('T')[0];
+
+                        dailyForecast.push({
+                            date: dateStr,
+                            maxWave: Math.round(maxWave * 10) / 10,
+                            avgPeriod,
+                            maxSwell: Math.round(maxSwell * 10) / 10,
+                            maxCurrent: Math.round(maxCurrent * 10) / 10,
+                            maxWind: Math.round(maxWind * 10) / 10,
+                            maxGust: Math.round(maxGust * 10) / 10,
+                            minVis
+                        });
+                    }
+
+                    return {
+                        coord,
+                        label: `Waypoint ${idx+1} (${Math.round(lat*100)/100}°, ${Math.round(lon*100)/100}°)`,
+                        daily: dailyForecast
+                    };
+                });
+
+                const weatherData = await Promise.all(weatherPromises);
+                
+                // Store globally for clicking
+                window.currentWeatherData = weatherData;
+                window.currentRouteLine = routeLine;
+
+                // Build 7-day route outlook
+                if (weatherData[0] && weatherData[0].daily.length > 0) {
+                    let sevenDayHtml = '';
+                    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+                    for(let d=0; d<7; d++) {
+                        const dateStr = weatherData[0].daily[d].date;
+                        const dateObj = new Date(dateStr);
+                        const dayName = days[dateObj.getDay()];
+                        
+                        const maxWDay = Math.max(...weatherData.map(wp => wp.daily[d] ? wp.daily[d].maxWave : 0));
+                        const maxWindDay = Math.max(...weatherData.map(wp => wp.daily[d] ? wp.daily[d].maxWind : 0));
+                        const minVisDay = Math.min(...weatherData.map(wp => wp.daily[d] ? wp.daily[d].minVis : 20));
+                        
+                        let dColor = '#34d399';
+                        if (maxWDay > 4.5 || maxWindDay > 55 || minVisDay < 2) { 
+                            dColor = '#ef4444'; 
+                        } else if (maxWDay > 2.5 || maxWindDay > 35 || minVisDay < 5) { 
+                            dColor = '#f59e0b'; 
+                        }
+                        
+                        sevenDayHtml += `
+                            <div class="day-card" id="dayCard_${d}" onclick="renderDay(${d})" style="background:var(--bg); border:1px solid rgba(255,255,255,0.05); border-radius:6px; padding:10px 12px; min-width:76px; text-align:center; flex-shrink:0; cursor:pointer; transition:all 0.2s;">
+                                <div style="font-size:11px; color:var(--text-sec); margin-bottom:4px; font-weight:600;">${dayName}</div>
+                                <div style="font-weight:700; font-size:13px; color:${dColor};">🌊 ${Math.round(maxWDay*10)/10}m</div>
+                                <div style="font-size:9.5px; color:var(--muted); margin-top:3px; font-family:'JetBrains Mono',monospace;">💨 ${Math.round(maxWindDay)}km/h</div>
+                            </div>
+                        `;
+                    }
+                    document.getElementById('sevenDayContainer').innerHTML = sevenDayHtml;
+                }
+
+                document.getElementById('results').classList.add('vis');
+                
+                // Trigger resize to fix map layout after results show
+                setTimeout(() => map.invalidateSize(), 100);
+
+                // Render Day 0 by default
+                renderDay(0);
+
+            } catch (err) {
+                console.error(err);
+                alert('Failed to calculate route or fetch weather. Ensure Python backend is running.');
+            } finally {
+                btn.disabled=false; btn.classList.remove('loading');
+                document.getElementById('btnTxt').textContent = 'CHECK MARINE WEATHER';
+            }
+        }
+
+        function renderDay(dayIndex) {
+            const weatherData = window.currentWeatherData;
+            if(!weatherData) return;
+
+            // Highlight selected day
+            for(let d=0; d<7; d++) {
+                const el = document.getElementById('dayCard_'+d);
+                if(el) {
+                    if(d === dayIndex) {
+                        el.style.borderColor = 'rgba(52, 211, 153, 0.5)';
+                        el.style.background = 'rgba(52, 211, 153, 0.05)';
+                    } else {
+                        el.style.borderColor = 'rgba(255,255,255,0.05)';
+                        el.style.background = 'var(--bg)';
+                    }
+                }
+            }
+
+            // Update waypoints and map
+            markersLayer.clearLayers();
+            
+            // Re-add origin/dest markers
+            L.circleMarker([selOrig.latitude, selOrig.longitude], { color: '#4ade80', radius: 6, weight: 2 }).bindPopup('Origin: '+selOrig.wpi_port_name).addTo(markersLayer);
+            L.circleMarker([selDest.latitude, selDest.longitude], { color: '#818cf8', radius: 6, weight: 2 }).bindPopup('Dest: '+selDest.wpi_port_name).addTo(markersLayer);
+
+            let maxWave = 0;
+            let maxWind = 0;
+            let minVis = 20;
+            let isDanger = false;
+            let isWarn = false;
+            let wpCards = '';
+
+            weatherData.forEach(wp => {
+                const dayData = wp.daily[dayIndex];
+                if (!dayData) return;
+                
+                if (dayData.maxWave > maxWave) maxWave = dayData.maxWave;
+                if (dayData.maxWind > maxWind) maxWind = dayData.maxWind;
+                if (dayData.minVis < minVis) minVis = dayData.minVis;
+                
+                let status = 'SAFE', badgeCls = 'safe', iconCls = 'safe', iconTxt = '✓';
+                
+                if (dayData.maxWave > 4.5 || dayData.maxWind > 55 || dayData.minVis < 1.5) { 
+                    status = 'DANGER'; badgeCls = 'danger'; iconCls = 'danger'; iconTxt = '⚠'; isDanger = true;
+                } else if (dayData.maxWave > 2.5 || dayData.maxWind > 35 || dayData.maxSwell > 2.0 || dayData.minVis < 5) { 
+                    status = 'ROUGH'; badgeCls = 'rough'; iconCls = 'rough'; iconTxt = '≈'; isWarn = true;
+                }
+
+                // Draw marker on map
+                const iconHtml = `<div class="weather-icon ${iconCls}">${iconTxt}</div>`;
+                const customIcon = L.divIcon({ html: iconHtml, className: '', iconSize: [24, 24], iconAnchor: [12, 12] });
+                
+                const wpPopup = `
+                    <div style="font-family:'Inter',sans-serif; min-width:180px;">
+                        <div style="font-weight:700; font-size:12px; margin-bottom:6px; color:#fff;">${wp.label}</div>
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:10.5px; color:#a1a1aa; display:flex; flex-direction:column; gap:3px;">
+                            <div>🌊 Waves: <b style="color:#fff;">${dayData.maxWave}m</b> (${dayData.avgPeriod}s)</div>
+                            <div>🌊 Swell: <b style="color:#fff;">${dayData.maxSwell}m</b></div>
+                            <div>💨 Wind: <b style="color:#fff;">${dayData.maxWind} km/h</b> (Gusts: ${dayData.maxGust} km/h)</div>
+                            <div>🧭 Current: <b style="color:#fff;">${dayData.maxCurrent} km/h</b></div>
+                            <div>👁 Visibility: <b style="color:#fff;">${dayData.minVis} km</b></div>
+                        </div>
+                    </div>
+                `;
+
+                L.marker([wp.coord[1], wp.coord[0]], {icon: customIcon})
+                    .bindPopup(wpPopup)
+                    .addTo(markersLayer);
+
+                // Add HTML card
+                wpCards += `
+                    <div class="point-card">
+                        <div class="point-hdr">
+                            <span>${wp.label}</span>
+                            <span class="badge ${badgeCls}">${status}</span>
+                        </div>
+                        <div class="point-metrics-grid">
+                            <div class="metric-cell">
+                                <span class="metric-label">🌊 Waves</span>
+                                <span class="metric-val">${dayData.maxWave}m <small style="color:var(--muted); font-size:9px;">(${dayData.avgPeriod}s)</small></span>
+                            </div>
+                            <div class="metric-cell">
+                                <span class="metric-label">💨 Wind</span>
+                                <span class="metric-val">${dayData.maxWind} km/h</span>
+                            </div>
+                            <div class="metric-cell">
+                                <span class="metric-label">🌊 Swell</span>
+                                <span class="metric-val">${dayData.maxSwell}m</span>
+                            </div>
+                            <div class="metric-cell">
+                                <span class="metric-label">🧭 Current</span>
+                                <span class="metric-val">${dayData.maxCurrent} km/h</span>
+                            </div>
+                            <div class="metric-cell" style="grid-column: span 2;">
+                                <span class="metric-label">💨 Gusts: <b style="color:var(--off)">${dayData.maxGust} km/h</b></span>
+                                <span class="metric-label">👁 Vis: <b style="color:var(--off)">${dayData.minVis} km</b> ${dayData.minVis < 4 ? '<span style="color:#ef4444; font-size:9px;">(Fog Alert)</span>' : ''}</span>
+                            </div>
+                        </div>
+                    </div>`;
+            });
+
+            document.getElementById('waypointsContainer').innerHTML = wpCards;
+
+            const statusEl = document.getElementById('routeStatus');
+            const descEl = document.getElementById('routeDesc');
+            const routeLine = window.currentRouteLine;
+
+            const dateLabel = weatherData[0].daily[dayIndex].date;
+
+            if (isDanger) {
+                statusEl.textContent = 'HIGH RISK';
+                statusEl.className = 'stat-val bad';
+                descEl.textContent = `[${dateLabel}] Severe sea states detected on route (Max waves: ${maxWave}m, Wind: ${maxWind}km/h). Rerouting recommended.`;
+                if(routeLine) routeLine.setStyle({ color: '#ef4444', dashArray: null });
+            } else if (isWarn) {
+                statusEl.textContent = 'MODERATE RISK';
+                statusEl.className = 'stat-val warn';
+                descEl.textContent = `[${dateLabel}] Rough conditions ahead (Max waves: ${maxWave}m, Wind: ${maxWind}km/h). Proceed with caution.`;
+                if(routeLine) routeLine.setStyle({ color: '#f59e0b', dashArray: null });
+            } else {
+                statusEl.textContent = 'ALL CLEAR';
+                statusEl.className = 'stat-val ok';
+                descEl.textContent = `[${dateLabel}] Favorable sea and atmospheric conditions across the entire route (Max waves: ${maxWave}m, Wind: ${maxWind}km/h, Vis: ${minVis}km).`;
+                if(routeLine) routeLine.setStyle({ color: '#34d399', dashArray: null });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1935 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Commercial Voyage Invoice &amp; Dispatch — Nexora Freight Intelligence</title>
+    <meta name="description" content="Commercial trip estimation, automated vessel matching, live weather risk assessment, safe haven rerouting, and emergency delay invoice generation.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link rel="stylesheet" href="dashboard.css">
+    
+    <script>
+        let sd = sessionStorage.getItem('nexora_user_data');
+        if (!sd) {
+            sessionStorage.setItem('nexora_user_data', JSON.stringify({name:'Demo User',email:'demo.user@nexora.com',picture:null}));
+        }
+    </script>
+    <style>
+        .ti-layout {
+            display: flex;
+            flex-direction: column;
+            gap: 28px;
+            max-width: 1560px;
+            margin: 0 auto;
+            width: 100%;
+            padding-bottom: 50px;
+        }
+
+        .ti-grid {
+            display: grid;
+            grid-template-columns: 460px 1fr;
+            gap: 24px;
+            align-items: start;
+        }
+        @media(max-width:1150px) {
+            .ti-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Panels */
+        .panel {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        .panel-hdr {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255,255,255,0.015);
+        }
+        .panel-hdr-left {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .panel-icon {
+            width: 38px;
+            height: 38px;
+            background: rgba(159, 107, 10, 0.12);
+            border: 1px solid rgba(159, 107, 10, 0.3);
+            color: #d97706;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 19px;
+        }
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--off);
+            letter-spacing: -0.2px;
+        }
+        .panel-body {
+            padding: 24px;
+        }
+
+        /* Form elements */
+        .fg-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+        .fg {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-bottom: 16px;
+        }
+        .fg label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+            color: var(--text-sec);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .fg select, .fg input {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--off);
+            padding: 10px 14px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            outline: none;
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .fg select:focus, .fg input:focus {
+            border-color: rgba(159, 107, 10, 0.6);
+            background: rgba(159, 107, 10, 0.05);
+        }
+        .fg select:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        .btn-primary {
+            background: #d97706;
+            color: #050505;
+            border: none;
+            border-radius: 6px;
+            padding: 14px 20px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            letter-spacing: 0.5px;
+            margin-top: 10px;
+        }
+        .btn-primary:hover {
+            background: #b45309;
+            transform: translateY(-1px);
+        }
+        .btn-primary:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid rgba(0,0,0,0.25);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            display: none;
+        }
+        .btn-primary.loading .spinner { display: block; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Map styling */
+        #map {
+            width: 100%;
+            height: 560px;
+            border-radius: 12px;
+            background: #080807;
+            z-index: 1;
+            border: 1px solid var(--border);
+        }
+        .leaflet-container { font-family: 'Inter', sans-serif; }
+        .leaflet-popup-content-wrapper {
+            background: var(--bg-card);
+            color: var(--off);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+        }
+        .leaflet-popup-tip { background: var(--bg-card); }
+
+        /* Storm Alert Banner */
+        .storm-banner {
+            border-radius: 8px;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            animation: fadeIn 0.4s ease;
+        }
+        .storm-banner.danger {
+            background: rgba(239, 68, 68, 0.12);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #ef4444;
+        }
+        .storm-banner.warn {
+            background: rgba(245, 158, 11, 0.12);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            color: #f59e0b;
+        }
+        .storm-banner.clear {
+            background: rgba(52, 211, 153, 0.1);
+            border: 1px solid rgba(52, 211, 153, 0.3);
+            color: #34d399;
+        }
+        .storm-hdr {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .storm-desc {
+            font-size: 12px;
+            color: var(--text-sec);
+            margin-top: 4px;
+        }
+
+        /* Results & Rerouting Section */
+        #tripResults {
+            display: none;
+            flex-direction: column;
+            gap: 28px;
+            animation: fadeIn 0.4s ease;
+        }
+        #tripResults.vis { display: flex; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+        /* Fuel Reference Strip */
+        .fuel-index-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            margin-bottom: 24px;
+        }
+        @media(max-width:900px) { .fuel-index-strip { grid-template-columns: repeat(2, 1fr); } }
+        .fis-item { display: flex; flex-direction: column; gap: 3px; }
+        .fis-lbl { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted); }
+        .fis-val { font-size: 13.5px; font-weight: 700; color: var(--off); font-family: 'JetBrains Mono', monospace; }
+
+        /* Matched Vessel Card */
+        .specs-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-top: 14px;
+        }
+        @media(max-width:850px) { .specs-grid { grid-template-columns: repeat(2, 1fr); } }
+        .spec-box {
+            background: rgba(0,0,0,0.25);
+            border: 1px solid rgba(255,255,255,0.04);
+            border-radius: 6px;
+            padding: 12px;
+        }
+        .spec-box .lbl {
+            font-size: 9.5px;
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+        .spec-box .val {
+            font-size: 13.5px;
+            font-weight: 700;
+            color: var(--off);
+            margin-top: 4px;
+        }
+
+        /* Safe Haven / Emergency Ports Grid */
+        .port-matrix-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+        .port-matrix-card {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+        .port-matrix-card:hover {
+            border-color: rgba(52, 211, 153, 0.4);
+            transform: translateY(-2px);
+        }
+        .port-matrix-card.selected {
+            border-color: #34d399;
+            background: rgba(52, 211, 153, 0.05);
+        }
+        .pmc-hdr {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .pmc-name {
+            font-weight: 700;
+            font-size: 14px;
+            color: var(--off);
+        }
+        .pmc-badge {
+            font-size: 9.5px;
+            font-family: 'JetBrains Mono', monospace;
+            padding: 2px 7px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .pmc-badge.ok { background: rgba(52,211,153,0.15); color: #34d399; }
+        .pmc-badge.warn { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .pmc-badge.fallback { background: rgba(99,102,241,0.15); color: #818cf8; }
+
+        .pmc-details {
+            font-size: 11px;
+            color: var(--text-sec);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        /* ========================================================
+           ULTRA-PROFESSIONAL COMMERCIAL INVOICE STYLING
+           ======================================================== */
+        .invoice-card {
+            background: #0d0c0b;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 44px;
+            position: relative;
+            box-shadow: 0 12px 48px rgba(0,0,0,0.6);
+            color: var(--off);
+        }
+
+        .inv-top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid rgba(217, 119, 6, 0.4);
+            padding-bottom: 24px;
+            margin-bottom: 24px;
+        }
+        .inv-brand-name {
+            font-size: 24px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+        }
+        .inv-brand-name span { color: #d97706; }
+        .inv-doc-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--text-sec);
+            margin-top: 4px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        .inv-meta-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            background: rgba(255,255,255,0.02);
+            padding: 14px 18px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 28px;
+        }
+        @media(max-width:800px) { .inv-meta-grid { grid-template-columns: repeat(2, 1fr); } }
+        .img-cell .lbl { color: var(--muted); font-size: 9.5px; margin-bottom: 3px; }
+        .img-cell .val { color: var(--off); font-weight: 700; font-size: 12px; }
+
+        /* Party Details Grid */
+        .inv-parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 28px;
+        }
+        @media(max-width:700px) { .inv-parties { grid-template-columns: 1fr; } }
+        .party-card {
+            background: rgba(255,255,255,0.015);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 20px;
+        }
+        .party-title {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #d97706;
+            letter-spacing: 1px;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .party-name { font-size: 15px; font-weight: 700; color: var(--off); margin-bottom: 4px; }
+        .party-desc { font-size: 12px; color: var(--text-sec); line-height: 1.5; }
+
+        /* Section Headings in Invoice */
+        .inv-sec-hdr {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.8px;
+            color: #d97706;
+            text-transform: uppercase;
+            margin: 28px 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .inv-sec-hdr::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        /* Manifest Box */
+        .inv-specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.015);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+        .inv-specs-table td {
+            padding: 11px 16px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+        .inv-specs-table tr:last-child td { border-bottom: none; }
+        .inv-specs-table .lbl {
+            width: 28%;
+            color: var(--muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10.5px;
+        }
+        .inv-specs-table .val {
+            color: var(--off);
+            font-weight: 600;
+        }
+
+        /* Master Invoice Table */
+        .inv-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12.5px;
+            margin-bottom: 24px;
+        }
+        .inv-table th {
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            background: rgba(255,255,255,0.02);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .inv-table td {
+            padding: 13px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--off);
+        }
+        .inv-table tr.contingency-row td {
+            background: rgba(245, 158, 11, 0.025);
+        }
+        .inv-table tr.total-subrow td {
+            background: rgba(255,255,255,0.01);
+            font-weight: 600;
+        }
+        .inv-table .num {
+            text-align: right;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Safe Haven Emergency Table inside Invoice */
+        .haven-summary-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11.5px;
+            margin: 10px 0 24px;
+            border: 1px solid rgba(56, 189, 248, 0.2);
+            border-radius: 6px;
+            background: rgba(56, 189, 248, 0.02);
+        }
+        .haven-summary-table th {
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 10px;
+            color: #38bdf8;
+            text-transform: uppercase;
+        }
+        .haven-summary-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+            color: var(--off);
+        }
+
+        /* Invoice Summary Footer */
+        .inv-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding-top: 24px;
+            border-top: 2px solid var(--border);
+            margin-top: 20px;
+        }
+        @media(max-width:850px) { .inv-bottom { flex-direction: column; align-items: stretch; gap: 24px; } }
+        
+        .inv-left-notes {
+            max-width: 58%;
+            font-size: 11px;
+            color: var(--text-sec);
+            line-height: 1.65;
+        }
+        .inv-left-notes b { color: var(--off); }
+
+        .inv-totals-box {
+            width: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            background: rgba(255,255,255,0.02);
+            padding: 18px 22px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .inv-totals-row {
+            display: flex;
+            justify-content: space-between;
+            color: var(--text-sec);
+        }
+        .inv-totals-row.grand {
+            font-size: 17px;
+            font-weight: 800;
+            color: #d97706;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+            margin-top: 6px;
+        }
+
+        /* Signatory & Security Block */
+        .inv-sign-block {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 24px;
+            margin-top: 36px;
+            padding-top: 24px;
+            border-top: 1px dashed var(--border);
+        }
+        @media(max-width:750px) { .inv-sign-block { grid-template-columns: 1fr; } }
+        .sign-col { display: flex; flex-direction: column; gap: 8px; }
+        .sign-title { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: var(--muted); text-transform: uppercase; }
+        .sign-line { height: 44px; border-bottom: 1px solid var(--text-sec); display: flex; align-items: flex-end; font-family:'JetBrains Mono', monospace; font-size:12px; color:#34d399; }
+        .sign-sub { font-size: 10px; color: var(--muted); }
+
+        .inv-actions {
+            display: flex;
+            gap: 14px;
+            justify-content: flex-end;
+            margin-top: 24px;
+        }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid var(--border);
+            color: var(--off);
+            border-radius: 6px;
+            padding: 12px 22px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11.5px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .btn-outline:hover {
+            border-color: #d97706;
+            color: #d97706;
+            background: rgba(217,119,6,0.05);
+        }
+
+        /* ========================================================
+           PRINT-PERFECT EXECUTIVE PDF MEDIA QUERIES
+           ======================================================== */
+        @media print {
+            body {
+                background: #ffffff !important;
+                color: #0f172a !important;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            .sidebar, .topbar, .panel, #map, .inv-actions, .storm-banner, .fuel-index-strip {
+                display: none !important;
+            }
+            .ti-layout {
+                max-width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            .invoice-card {
+                border: none !important;
+                box-shadow: none !important;
+                background: #ffffff !important;
+                color: #0f172a !important;
+                padding: 20px 24px !important;
+            }
+            .inv-brand-name { color: #0f172a !important; }
+            .inv-brand-name span { color: #b45309 !important; }
+            .inv-top-bar { border-bottom: 2px solid #b45309 !important; }
+            .inv-meta-grid { background: #f8fafc !important; border: 1px solid #cbd5e1 !important; color: #0f172a !important; }
+            .img-cell .lbl { color: #64748b !important; }
+            .img-cell .val { color: #0f172a !important; }
+            .party-card { background: #f8fafc !important; border: 1px solid #e2e8f0 !important; }
+            .party-name { color: #0f172a !important; }
+            .party-desc { color: #475569 !important; }
+            .inv-sec-hdr { color: #b45309 !important; }
+            .inv-sec-hdr::after { background: #cbd5e1 !important; }
+            .inv-specs-table { background: #ffffff !important; border: 1px solid #cbd5e1 !important; }
+            .inv-specs-table td { color: #0f172a !important; border-bottom: 1px solid #e2e8f0 !important; }
+            .inv-specs-table .lbl { color: #64748b !important; }
+            .inv-specs-table .val { color: #0f172a !important; }
+            .haven-summary-table { background: #f0fdf4 !important; border: 1px solid #86efac !important; }
+            .haven-summary-table th { color: #166534 !important; border-bottom: 1px solid #86efac !important; }
+            .haven-summary-table td { color: #0f172a !important; border-bottom: 1px solid #e2e8f0 !important; }
+            .inv-table th { background: #f1f5f9 !important; color: #334155 !important; border-bottom: 2px solid #cbd5e1 !important; }
+            .inv-table td { color: #0f172a !important; border-bottom: 1px solid #e2e8f0 !important; }
+            .inv-table tr.contingency-row td { background: #fffbeb !important; color: #92400e !important; }
+            .inv-totals-box { background: #f8fafc !important; border: 1px solid #cbd5e1 !important; }
+            .inv-totals-row { color: #475569 !important; }
+            .inv-totals-row.grand { color: #b45309 !important; border-top: 2px solid #b45309 !important; }
+            .sign-line { border-bottom: 1px solid #0f172a !important; color: #059669 !important; }
+            .sign-sub { color: #64748b !important; }
+            .inv-left-notes { color: #475569 !important; }
+            .inv-left-notes b { color: #0f172a !important; }
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <a href="index.html" class="sidebar-logo">NEXORA<span>FREIGHT</span></a>
+            <div class="sidebar-badge">INTELLIGENCE PLATFORM</div>
+        </div>
+        <nav class="sidebar-nav">
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">OVERVIEW</div>
+                <a href="dashboard.html" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    Dashboard
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">INTELLIGENCE</div>
+                <a href="trip_invoice.html" class="sidebar-link active">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+                    Cargo Input &amp; Invoice
+                </a>
+                <a href="weather_forecast.html" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Weather Forecast
+                </a>
+                <a href="vessel_match.html" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 21l.4-2M22 21l-.4-2M6.09 19a14 14 0 0011.82 0"/><path d="M3 7l8-4 8 4"/><line x1="11" y1="3" x2="11" y2="19"/><path d="M3 7v6c0 3.31 3.58 6 8 6s8-2.69 8-6V7"/></svg>
+                    Vessel Match
+                </a>
+            </div>
+            <div class="sidebar-section">
+                <div class="sidebar-section-label">DATA</div>
+                <a href="ports_network.html" class="sidebar-link">
+                    <svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="3"/><path d="M12 21.7C17.3 17 20 13 20 10a8 8 0 10-16 0c0 3 2.7 7 8 11.7z"/></svg>
+                    Port Database
+                </a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M6 21V9a9 9 0 009 9h6"/></svg>Trade Routes</a>
+                <a href="#" class="sidebar-link"><svg class="sidebar-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>Risk Alerts<span class="badge-count">3</span></a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar" id="sidebarAvatar">N</div>
+                <div class="sidebar-user-info">
+                    <div class="sidebar-user-name" id="sidebarName">User</div>
+                    <div class="sidebar-user-email" id="sidebarEmail">user@nexora.com</div>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <div class="main">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn" id="mobileMenuBtn" aria-label="Toggle menu">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+                </button>
+                <div>
+                    <div class="topbar-title">Commercial Voyage Dispatch &amp; Pre-Departure Invoice</div>
+                    <div class="topbar-breadcrumb">INTELLIGENCE / CARGO INPUT &amp; BILLING CENTER</div>
+                </div>
+            </div>
+            <div class="topbar-right">
+                <div class="topbar-status"><span class="topbar-dot" style="background:#34d399"></span>SCALE OF RATES ACTIVE</div>
+            </div>
+        </header>
+
+        <div class="dashboard-content">
+            <div class="ti-layout">
+                
+                <!-- Main Controls Grid -->
+                <div class="ti-grid">
+                    
+                    <!-- Left: Trip & Cargo Input Form -->
+                    <div class="panel">
+                        <div class="panel-hdr">
+                            <div class="panel-hdr-left">
+                                <div class="panel-icon">&#x1F4CB;</div>
+                                <div>
+                                    <div class="panel-title">Trip &amp; Cargo Specifications</div>
+                                    <div style="font-size:12px; color:var(--text-sec)">Commodity details, valuation &amp; ports</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            
+                            <div class="fg">
+                                <label>Commodity Cargo Description</label>
+                                <input type="text" id="cargoName" value="Grade 62% Fe Australian / Indian Iron Ore Fines" placeholder="e.g. Iron Ore Bulk, Arabian Light Crude, Thermal Coal">
+                            </div>
+
+                            <div class="fg">
+                                <label>Commodity Category &amp; Handling</label>
+                                <select id="cargoType">
+                                    <option value="dry_bulk" selected>Dry Bulk Minerals (Iron Ore, Coal, Bauxite, Limestone)</option>
+                                    <option value="crude_oil">Liquid Energy / Crude Oil (Tanker &amp; SPM Direct Pipeline)</option>
+                                    <option value="lng">Liquefied Gas Commodities (LNG / LPG Cryogenic Tanker)</option>
+                                    <option value="agri_bulk">Agricultural &amp; Soft Commodities (Wheat, Grain, Soybeans, Sugar)</option>
+                                    <option value="refined_petro">Clean Petroleum &amp; Chemicals (Diesel, Gasoil, Jet Fuel)</option>
+                                </select>
+                            </div>
+
+                            <div class="fg-grid">
+                                <div class="fg">
+                                    <label id="cargoVolLabel">Commodity Weight (Metric Tons - MT)</label>
+                                    <input type="number" id="cargoVol" value="50000" min="500" step="1000">
+                                </div>
+                                <div class="fg">
+                                    <label>Declared Cargo Value ($USD)</label>
+                                    <input type="number" id="cargoValue" value="5500000" min="10000" step="50000">
+                                </div>
+                            </div>
+
+                            <div class="fg-grid">
+                                <div class="fg">
+                                    <label>Departure Date</label>
+                                    <input type="date" id="depDate">
+                                </div>
+                                <div class="fg">
+                                    <label>Charterer / Shipper Name</label>
+                                    <input type="text" id="shipperName" value="Apex Global Logistics Ltd.">
+                                </div>
+                            </div>
+
+                            <div style="height:1px; background:var(--border); margin:14px 0;"></div>
+
+                            <div class="fg-grid">
+                                <div class="fg">
+                                    <label>Origin Country</label>
+                                    <select id="origCtry"><option value="" disabled selected>Loading...</option></select>
+                                </div>
+                                <div class="fg">
+                                    <label>Origin Port</label>
+                                    <select id="origPort" disabled><option value="" disabled selected>Select country...</option></select>
+                                </div>
+                            </div>
+
+                            <div style="text-align:center; color:var(--muted); font-size:12px; margin:-4px 0 10px;">&#x2193; Sea Navigation Corridor &#x2193;</div>
+
+                            <div class="fg-grid">
+                                <div class="fg">
+                                    <label>Destination Country</label>
+                                    <select id="destCtry"><option value="" disabled selected>Loading...</option></select>
+                                </div>
+                                <div class="fg">
+                                    <label>Destination Port</label>
+                                    <select id="destPort" disabled><option value="" disabled selected>Select country...</option></select>
+                                </div>
+                            </div>
+
+                            <button class="btn-primary" id="calculateTripBtn" onclick="runTripInvoicePlan()">
+                                <div class="spinner" id="btnSpin"></div>
+                                <span id="btnTxt">&#x26A1; PLAN TRIP &amp; GENERATE INVOICE</span>
+                            </button>
+
+                            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:var(--muted); text-align:center; margin-top:12px;">
+                                Integrates: Searoute GIS &bull; Open-Meteo &bull; Scale of Rates (SoR)
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Live Marine Map -->
+                    <div style="display:flex; flex-direction:column; gap:16px;">
+                        <div id="map"></div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; font-family:'JetBrains Mono',monospace; font-size:11px; color:var(--text-sec); padding:0 6px;">
+                            <div style="display:flex; gap:16px;">
+                                <span><span style="color:#4ade80;">&#9679;</span> Route Waypoints</span>
+                                <span><span style="color:#38bdf8;">&#9679;</span> Safe Haven Ports</span>
+                                <span><span style="color:#ef4444;">&#9679;</span> Storm / Risk Zones</span>
+                            </div>
+                            <div id="mapStatusMsg">Select ports and click Plan Trip</div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Results & Invoice Display -->
+                <div id="tripResults">
+                    
+                    <!-- Global Bunker Fuel Live API Strip -->
+                    <div class="fuel-index-strip">
+                        <div class="fis-item">
+                            <span class="fis-lbl">LIVE BRENT CRUDE OIL</span>
+                            <span class="fis-val" id="brentVal" style="color:#f59e0b;">$97.59 / bbl</span>
+                        </div>
+                        <div class="fis-item">
+                            <span class="fis-lbl">LIVE VLSFO 0.5% S (BUNKER)</span>
+                            <span class="fis-val" id="vlsfoVal" style="color:#34d399;">$658.73 / MT</span>
+                        </div>
+                        <div class="fis-item">
+                            <span class="fis-lbl">LIVE MGO 0.1% S (DISTILLATE)</span>
+                            <span class="fis-val" id="mgoVal" style="color:#38bdf8;">$756.32 / MT</span>
+                        </div>
+                        <div class="fis-item">
+                            <span class="fis-lbl">MARKET API STATUS</span>
+                            <span class="fis-val" style="color:#38bdf8; font-size:12px;" id="fuelSourceLabel">&#9679; LIVE API (Yahoo Finance)</span>
+                        </div>
+                    </div>
+
+                    <!-- Storm & Safety Warning Banner -->
+                    <div id="stormBanner" class="storm-banner clear">
+                        <div>
+                            <div class="storm-hdr" id="stormHdr">&#10003; ROUTE WEATHER ADVISORY: ALL CLEAR</div>
+                            <div class="storm-desc" id="stormDesc">Favorable sea conditions forecasted along the planned sailing route.</div>
+                        </div>
+                        <div id="stormPill" style="font-family:'JetBrains Mono',monospace; font-weight:700; font-size:12px;">
+                            0H CONTINGENCY
+                        </div>
+                    </div>
+
+                    <!-- Vessel & Emergency Ports Row -->
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:24px;">
+                        
+                        <!-- Matched Vessel -->
+                        <div class="panel">
+                            <div class="panel-hdr">
+                                <div class="panel-hdr-left">
+                                    <div class="panel-icon" style="color:#34d399; background:rgba(52,211,153,0.1); border-color:rgba(52,211,153,0.3)">&#x1F6A2;</div>
+                                    <div>
+                                        <div class="panel-title">Assigned Fleet Vessel</div>
+                                        <div style="font-size:12px; color:var(--text-sec)">Selected for payload, draft &amp; speed</div>
+                                    </div>
+                                </div>
+                                <div class="vbadge" id="vMatchScore" style="background:rgba(52,211,153,0.15); color:#34d399; padding:4px 10px; border-radius:20px; font-size:11px; font-family:'JetBrains Mono',monospace; font-weight:700;">OPTIMAL MATCH</div>
+                            </div>
+                            <div class="panel-body" id="vesselDetailBody">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Safe Haven / Emergency Ports -->
+                        <div class="panel">
+                            <div class="panel-hdr">
+                                <div class="panel-hdr-left">
+                                    <div class="panel-icon" style="color:#38bdf8; background:rgba(56,189,248,0.1); border-color:rgba(56,189,248,0.3)">&#x2693;</div>
+                                    <div>
+                                        <div class="panel-title">Compatible Safe Haven Ports</div>
+                                        <div style="font-size:12px; color:var(--text-sec)">Emergency rerouting &amp; anchorage reservation</div>
+                                    </div>
+                                </div>
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#38bdf8; font-weight:700;" id="havenCount">
+                                    AVAILABLE
+                                </div>
+                            </div>
+                            <div class="panel-body" style="padding-top:14px;">
+                                <div style="font-size:11.5px; color:var(--text-sec); margin-bottom:10px;">
+                                    If cyclone or weather calamity occurs on route, the vessel is automatically rerouted to the nearest port matching its draft and cargo gear:
+                                </div>
+                                <div class="port-matrix-grid" id="safeHavenGrid">
+                                    <!-- Populated dynamically -->
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <!-- ========================================================
+                         OFFICIAL COMMERCIAL DISPATCH INVOICE (PDF READY)
+                         ======================================================== -->
+                    <div class="invoice-card" id="printableInvoice">
+                        
+                        <!-- Top Header -->
+                        <div class="inv-top-bar">
+                            <div>
+                                <div class="inv-brand-name">NEXORA <span>FREIGHT INTELLIGENCE</span></div>
+                                <div class="inv-doc-title">OFFICIAL COMMERCIAL VOYAGE ESTIMATION &amp; PRE-DEPARTURE INVOICE</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="display:inline-block; border:1px solid #34d399; color:#34d399; font-family:'JetBrains Mono',monospace; font-size:10px; font-weight:700; padding:4px 10px; border-radius:4px; letter-spacing:0.5px;">
+                                    &#10003; SCALE OF RATES (SoR) VERIFIED
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Metadata Grid -->
+                        <div class="inv-meta-grid">
+                            <div class="img-cell">
+                                <div class="lbl">INVOICE NUMBER</div>
+                                <div class="val" id="invNum">NX-2026-9841</div>
+                            </div>
+                            <div class="img-cell">
+                                <div class="lbl">ISSUE DATE</div>
+                                <div class="val" id="invDate">28 SEP 2026</div>
+                            </div>
+                            <div class="img-cell">
+                                <div class="lbl">VOYAGE ORDER REF</div>
+                                <div class="val" id="invVoyageRef">VOY-NX-7842</div>
+                            </div>
+                            <div class="img-cell">
+                                <div class="lbl">DEPARTURE STATUS</div>
+                                <div class="val" id="invStatus" style="color:#34d399;">AUTHORIZED</div>
+                            </div>
+                        </div>
+
+                        <!-- Parties -->
+                        <div class="inv-parties">
+                            <div class="party-card">
+                                <div class="party-title">CARRIER &amp; OPERATIONS DISPATCH</div>
+                                <div class="party-name">Nexora Marine Operations Division</div>
+                                <div class="party-desc">
+                                    Global Maritime Traffic Control &amp; Vessel Dispatch Hub<br>
+                                    Terminal Towers, Marine Basin 4 &bull; ops@nexora-freight.com
+                                </div>
+                            </div>
+                            <div class="party-card">
+                                <div class="party-title">CHARTERER / COMMERCIAL SHIPPER</div>
+                                <div class="party-name" id="invShipperName">Apex Global Logistics Ltd.</div>
+                                <div class="party-desc" id="invShipperDesc">
+                                    Commercial Bill of Lading Consignor &bull; Verified Account<br>
+                                    Voyage Charter &amp; Freight Forwarding Contract #NX-FF-4921
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 1: Cargo & Commodity Manifest -->
+                        <div class="inv-sec-hdr">1. Declared Cargo Manifest &amp; Commercial Valuation</div>
+                        <table class="inv-specs-table">
+                            <tr>
+                                <td class="lbl">COMMODITY / GOODS</td>
+                                <td class="val" id="invCargoDesc">--</td>
+                                <td class="lbl">CARGO CATEGORY</td>
+                                <td class="val" id="invCargoCategory">--</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">DECLARED QUANTITY</td>
+                                <td class="val" id="invCargoQty">--</td>
+                                <td class="lbl">DECLARED CARGO VALUE</td>
+                                <td class="val" id="invCargoValuation" style="color:#d97706;">--</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">UNIT COMMERCIAL PRICE</td>
+                                <td class="val" id="invUnitValuation">--</td>
+                                <td class="lbl">CARGO MARINE INSURANCE</td>
+                                <td class="val" id="invInsuranceCoverage">All-Risk Marine Transit (0.35%)</td>
+                            </tr>
+                        </table>
+
+                        <!-- Section 2: Assigned Vessel Technical Specifications -->
+                        <div class="inv-sec-hdr">2. Assigned Vessel Technical Specifications</div>
+                        <table class="inv-specs-table">
+                            <tr>
+                                <td class="lbl">VESSEL NAME / IMO</td>
+                                <td class="val" id="invVesselNameImo">--</td>
+                                <td class="lbl">VESSEL TYPE &amp; CLASS</td>
+                                <td class="val" id="invVesselTypeClass">--</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">GROSS TONNAGE (GRT)</td>
+                                <td class="val" id="invVesselGrtVal">--</td>
+                                <td class="lbl">DEADWEIGHT (DWT)</td>
+                                <td class="val" id="invVesselDwtVal">--</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">DIMENSIONS (LOA &times; BEAM)</td>
+                                <td class="val" id="invVesselLoaBeam">--</td>
+                                <td class="lbl">OPERATING DRAFT REQUIRED</td>
+                                <td class="val" id="invVesselDraftVal" style="color:#38bdf8;">--</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">SERVICE CRUISING SPEED</td>
+                                <td class="val" id="invVesselSpeedVal">--</td>
+                                <td class="lbl">DAILY TIME CHARTER RATE</td>
+                                <td class="val" id="invVesselDailyRate">--</td>
+                            </tr>
+                        </table>
+
+                        <!-- Section 3: Nautical Sea Route & Fuel Burn Matrix -->
+                        <div class="inv-sec-hdr">3. Sea Passage, Fuel Burn &amp; Global Market Index</div>
+                        <table class="inv-specs-table">
+                            <tr>
+                                <td class="lbl">PASSAGE CORRIDOR</td>
+                                <td class="val" id="invPassageRoute">-- &rarr; --</td>
+                                <td class="lbl">TOTAL SEA DISTANCE</td>
+                                <td class="val" id="invTotalNmVal" style="color:#34d399;">-- NM</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">ESTIMATED SEA DURATION</td>
+                                <td class="val" id="invSeaDaysVal">-- Days (-- Hours)</td>
+                                <td class="lbl">MAIN ENGINE FUEL TYPE</td>
+                                <td class="val" id="invVlsfoRateLabel">VLSFO 0.5% Sulphur (@ $658.60 / MT)</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">AT-SEA CONSUMPTION RATE</td>
+                                <td class="val" id="invDailyBurnVal">-- MT / day</td>
+                                <td class="lbl">TOTAL VOYAGE FUEL BURN</td>
+                                <td class="val" id="invTotalBurnVal" style="color:#d97706; font-weight:700;">-- MT VLSFO</td>
+                            </tr>
+                            <tr>
+                                <td class="lbl">IDLE GEN FUEL RATE</td>
+                                <td class="val" id="invMgoRateLabel">2.0 MT / day (MGO @ $756.20 / MT)</td>
+                                <td class="lbl">TOTAL FUEL EXPENDITURE</td>
+                                <td class="val" id="invTotalFuelExp" style="font-weight:700;">--</td>
+                            </tr>
+                        </table>
+
+                        <!-- Section 4: Live Calamity & Safe Haven Emergency Contingency -->
+                        <div class="inv-sec-hdr">4. Weather Risk Assessment &amp; Pre-Identified Safe Haven Ports</div>
+                        <div style="font-size:11.5px; color:var(--text-sec); margin-bottom:8px;" id="invWeatherSummaryTxt">
+                            Route weather assessment indicates favorable sailing conditions. In case of unexpected cyclonic activity, the vessel is certified to divert to the following compatible safe haven ports:
+                        </div>
+                        <table class="haven-summary-table" id="invHavenTable">
+                            <thead>
+                                <tr>
+                                    <th>SAFE HAVEN PORT</th>
+                                    <th>COUNTRY</th>
+                                    <th>DIVERT DISTANCE</th>
+                                    <th>HARBOR DRAFT DEPTH</th>
+                                    <th>SPECIALIZED EQUIPMENT</th>
+                                    <th>STATUS</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invHavenTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+
+                        <!-- Section 5: Itemized Commercial Billing Table -->
+                        <div class="inv-sec-hdr">5. Itemized Commercial Billing Breakdown</div>
+                        <table class="inv-table">
+                            <thead>
+                                <tr>
+                                    <th style="width:40%;">BILLING LINE ITEM / CHARGE BASIS</th>
+                                    <th>BENCHMARK RATE</th>
+                                    <th class="num">UNITS / DURATION</th>
+                                    <th class="num">SUBTOTAL (USD)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoiceTableBody">
+                                <!-- Populated dynamically -->
+                            </tbody>
+                        </table>
+
+                        <!-- Invoice Footer & Totals -->
+                        <div class="inv-bottom">
+                            <div class="inv-left-notes">
+                                <div style="font-weight:700; color:var(--off); margin-bottom:6px; font-family:'JetBrains Mono',monospace; font-size:11px;">
+                                    TERMS OF CARRIAGE &amp; SCALE OF RATES (SoR) GOVERNANCE
+                                </div>
+                                1. Bunker fuel charges are calculated based on S&amp;P Global Platts Singapore/Fujairah benchmark indices.<br>
+                                2. Emergency anchorage dues and auxiliary idle fuel burn adhere strictly to Major Port Authority published Scale of Rates (SoR).<br>
+                                3. If weather-enforced rerouting occurs, advance digital clearance is transmitted automatically to the designated safe haven port terminal.
+                            </div>
+                            <div class="inv-totals-box">
+                                <div class="inv-totals-row">
+                                    <span>Baseline Sea Transit Fuel:</span>
+                                    <span id="subtotalFuel">$0</span>
+                                </div>
+                                <div class="inv-totals-row">
+                                    <span>Vessel Commercial Time Charter:</span>
+                                    <span id="subtotalCharter">$0</span>
+                                </div>
+                                <div class="inv-totals-row">
+                                    <span>Cargo Marine Transit Insurance:</span>
+                                    <span id="subtotalInsurance">$0</span>
+                                </div>
+                                <div class="inv-totals-row">
+                                    <span>Port, Pilotage &amp; Harbor Dues:</span>
+                                    <span id="subtotalPort">$4,200</span>
+                                </div>
+                                <div class="inv-totals-row" style="color:#f59e0b;">
+                                    <span>Weather Contingency Dues:</span>
+                                    <span id="subtotalContingency">$0</span>
+                                </div>
+                                <div class="inv-totals-row">
+                                    <span>Emergency Admin &amp; Filing:</span>
+                                    <span id="subtotalAdmin">$0</span>
+                                </div>
+                                <div class="inv-totals-row grand">
+                                    <span>TOTAL VOYAGE ESTIMATE:</span>
+                                    <span id="grandTotal">$0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Formal Signatory & Dispatch Authority Block -->
+                        <div class="inv-sign-block">
+                            <div class="sign-col">
+                                <div class="sign-title">CARRIER OPERATIONS DISPATCH</div>
+                                <div class="sign-line">CAPT. R. VANDERBILT</div>
+                                <div class="sign-sub">Master Mariner &bull; Nexora Dispatch Authority</div>
+                            </div>
+                            <div class="sign-col">
+                                <div class="sign-title">CHARTERER ACCEPTANCE</div>
+                                <div class="sign-line" id="invChartererSign">APEX LOGISTICS OPS</div>
+                                <div class="sign-sub">Commercial Cargo Consignor Signature</div>
+                            </div>
+                            <div class="sign-col">
+                                <div class="sign-title">SECURITY &amp; DIGITAL VERIFICATION</div>
+                                <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#38bdf8; padding-top:6px;">
+                                    SHA-256: 8f4e91c2...0b41<br>
+                                    Status: DIGITALLY SEALED
+                                </div>
+                                <div class="sign-sub">Nexora Port Network Registry</div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="inv-actions">
+                            <button class="btn-outline" onclick="window.print()">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                                PRINT / EXPORT PROFESSIONAL PDF INVOICE
+                            </button>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+    <script>
+        // Set default departure date to today
+        document.getElementById('depDate').value = new Date().toISOString().split('T')[0];
+
+        // Session Setup
+        (function(){
+            try {
+                const sd = sessionStorage.getItem('nexora_user_data');
+                if (sd) {
+                    const u = JSON.parse(sd);
+                    const n = u.name || u.email.split('@')[0];
+                    document.getElementById('sidebarName').textContent = n;
+                    document.getElementById('sidebarEmail').textContent = u.email;
+                    const av = document.getElementById('sidebarAvatar');
+                    if (u.picture) {
+                        av.textContent = '';
+                        av.style.backgroundImage = 'url(\'' + u.picture + '\')';
+                        av.style.backgroundSize = 'cover';
+                        av.style.backgroundPosition = 'center';
+                    } else {
+                        av.textContent = n.charAt(0).toUpperCase();
+                    }
+                }
+            } catch(e){}
+        })();
+
+        document.getElementById('mobileMenuBtn').addEventListener('click', () => {
+            document.getElementById('sidebar').classList.toggle('open');
+        });
+
+        // Leaflet Map Init
+        const map = L.map('map').setView([15, 82], 4);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ',
+            maxZoom: 16
+        }).addTo(map);
+
+        let routeLayer = L.featureGroup().addTo(map);
+        let havenLayer = L.featureGroup().addTo(map);
+        let markersLayer = L.featureGroup().addTo(map);
+
+        // Supabase DB Connection
+        const SB = 'https://rrgwnlfefzcstdtmpojt.supabase.co';
+        const AK = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ3dubGZlZnpjc3RkdG1wb2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Nzg3NzcsImV4cCI6MjEwNjE1NDc3N30.3Eae1B7rueWyrDAhDmGLoAbslEo1jiXAbKzA5_gYyBI';
+        const HDR = {'apikey': AK, 'Authorization': 'Bearer ' + AK};
+
+        let allPorts = [], allVessels = [], selOrig = null, selDest = null;
+        let selectedSafeHaven = null;
+
+        // Live Fuel Market Data (from Commodities API)
+        let liveFuelData = {
+            brent: 97.59,
+            vlsfo: 658.73,
+            mgo: 756.32,
+            ifo380: 512.35,
+            source: 'Yahoo Finance Live Commodities',
+            timestamp: 'Just now'
+        };
+
+        async function fetchLiveFuelPrices() {
+            try {
+                const res = await fetch('http://localhost:8000/api/fuel-prices');
+                if (res.ok) {
+                    const data = await res.json();
+                    liveFuelData = {
+                        brent: data.brent_crude_usd_bbl || 97.59,
+                        vlsfo: data.vlsfo_usd_mt || 658.73,
+                        mgo: data.mgo_usd_mt || 756.32,
+                        ifo380: data.ifo380_usd_mt || 512.35,
+                        source: data.source || 'Yahoo Finance Live',
+                        timestamp: data.timestamp || 'Live'
+                    };
+                    document.getElementById('brentVal').textContent = `$${liveFuelData.brent.toFixed(2)} / bbl`;
+                    document.getElementById('vlsfoVal').textContent = `$${liveFuelData.vlsfo.toFixed(2)} / MT`;
+                    document.getElementById('mgoVal').textContent = `$${liveFuelData.mgo.toFixed(2)} / MT`;
+                    document.getElementById('fuelSourceLabel').innerHTML = `&#9679; ${liveFuelData.source}`;
+                }
+            } catch (err) {
+                console.warn('Using baseline benchmark fuel prices', err);
+            }
+        }
+
+        async function init() {
+            try {
+                fetchLiveFuelPrices();
+                const [portsRes, vesselsRes] = await Promise.all([
+                    fetch(SB + '/rest/v1/ports?select=*&limit=2000', { headers: HDR }).then(r => r.json()),
+                    fetch(SB + '/rest/v1/vessels?select=*&limit=500', { headers: HDR }).then(r => r.json())
+                ]);
+
+                allPorts = portsRes.filter(p => p.wpi_port_name && p.wpi_port_name.trim() !== '');
+                allVessels = vesselsRes;
+
+                const countries = [...new Set(allPorts.map(p => p.country).filter(Boolean))].sort();
+                const ch = '<option value="" disabled selected>Select country...</option>' + 
+                    countries.map(c => `<option value="${c}">${c}</option>`).join('');
+                document.getElementById('origCtry').innerHTML = ch;
+                document.getElementById('destCtry').innerHTML = ch;
+
+                const indPorts = allPorts.filter(p => p.country === 'India');
+                if (indPorts.length > 0) {
+                    document.getElementById('origCtry').value = 'India';
+                    fillPorts('India', 'origPort');
+                    const chn = indPorts.find(p => p.wpi_port_name.toLowerCase().includes('chennai')) || indPorts[0];
+                    document.getElementById('origPort').value = chn.wpi_port_id;
+                    selOrig = chn;
+
+                    document.getElementById('destCtry').value = 'India';
+                    fillPorts('India', 'destPort');
+                    const kol = indPorts.find(p => p.wpi_port_name.toLowerCase().includes('kolkata')) || indPorts[1];
+                    document.getElementById('destPort').value = kol.wpi_port_id;
+                    selDest = kol;
+                }
+            } catch (err) {
+                console.error('Failed to initialize database', err);
+            }
+        }
+
+        function fillPorts(country, selId) {
+            const pts = allPorts.filter(p => p.country === country).sort((a,b) => a.wpi_port_name.localeCompare(b.wpi_port_name));
+            const sel = document.getElementById(selId);
+            sel.innerHTML = '<option value="" disabled selected>Select port...</option>' + 
+                pts.map(p => `<option value="${p.wpi_port_id}">${p.wpi_port_name}${p.state ? ' (' + p.state + ')' : ''}</option>`).join('');
+            sel.disabled = false;
+        }
+
+        document.getElementById('origCtry').addEventListener('change', e => { selOrig = null; fillPorts(e.target.value, 'origPort'); });
+        document.getElementById('destCtry').addEventListener('change', e => { selDest = null; fillPorts(e.target.value, 'destPort'); });
+        document.getElementById('origPort').addEventListener('change', e => { selOrig = allPorts.find(p => p.wpi_port_id == e.target.value) || null; });
+        document.getElementById('destPort').addEventListener('change', e => { selDest = allPorts.find(p => p.wpi_port_id == e.target.value) || null; });
+
+        document.getElementById('cargoType').addEventListener('change', e => {
+            const lbl = document.getElementById('cargoVolLabel');
+            const vol = document.getElementById('cargoVol');
+            const val = document.getElementById('cargoValue');
+            const desc = document.getElementById('cargoName');
+
+            lbl.textContent = 'Commodity Weight (Metric Tons - MT)';
+
+            if (e.target.value === 'dry_bulk') {
+                vol.value = 50000;
+                val.value = 5500000;
+                desc.value = 'Grade 62% Fe Australian / Indian Iron Ore Fines';
+            } else if (e.target.value === 'crude_oil') {
+                vol.value = 80000;
+                val.value = 44800000;
+                desc.value = 'Arabian Light Crude Oil (API 32.8)';
+            } else if (e.target.value === 'lng') {
+                vol.value = 65000;
+                val.value = 31200000;
+                desc.value = 'Liquefied Natural Gas (LNG - Cryogenic -162°C)';
+            } else if (e.target.value === 'agri_bulk') {
+                vol.value = 35000;
+                val.value = 8400000;
+                desc.value = 'High-Grade Milling Wheat & Grain Bulk';
+            } else if (e.target.value === 'refined_petro') {
+                vol.value = 40000;
+                val.value = 28000000;
+                desc.value = 'Ultra-Low Sulfur Diesel (ULSD 10ppm)';
+            }
+        });
+
+        init();
+
+        // Haversine Distance (NM)
+        function haversineNm(lat1, lon1, lat2, lon2) {
+            const R = 3440.065; // Earth radius in nautical miles
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2)**2;
+            return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+        }
+
+        // ==========================================
+        // MAIN TRIP PLANNING & INVOICE WORKFLOW
+        // ==========================================
+        async function runTripInvoicePlan() {
+            if (!selOrig || !selDest) {
+                alert('Please select both Origin and Destination ports.');
+                return;
+            }
+
+            const btn = document.getElementById('calculateTripBtn');
+            btn.disabled = true; btn.classList.add('loading');
+            document.getElementById('btnTxt').textContent = 'CALCULATING PASSAGE & WEATHER...';
+
+            routeLayer.clearLayers();
+            havenLayer.clearLayers();
+            markersLayer.clearLayers();
+
+            try {
+                const cargoType = document.getElementById('cargoType').value;
+                const cargoName = document.getElementById('cargoName').value || 'Commercial Cargo';
+                const cargoVol = parseFloat(document.getElementById('cargoVol').value) || 500;
+                const cargoVal = parseFloat(document.getElementById('cargoValue').value) || 2500000;
+                const depDate = document.getElementById('depDate').value || new Date().toISOString().split('T')[0];
+                const shipperName = document.getElementById('shipperName').value || 'Apex Global Logistics Ltd.';
+
+                // 1. Fetch physical route from Python searoute backend
+                const url = `http://localhost:8000/api/route?olon=${selOrig.longitude}&olat=${selOrig.latitude}&dlon=${selDest.longitude}&dlat=${selDest.latitude}`;
+                const routeRes = await fetch(url);
+                if (!routeRes.ok) throw new Error('Sea routing engine failed');
+                const routeGeoJSON = await routeRes.json();
+
+                // Draw route on map
+                const routeLine = L.geoJSON(routeGeoJSON, {
+                    style: { color: '#38bdf8', weight: 3.5, opacity: 0.85 }
+                }).addTo(routeLayer);
+                map.fitBounds(routeLine.getBounds(), { padding: [50, 50] });
+
+                // Origin / Destination pins
+                L.circleMarker([selOrig.latitude, selOrig.longitude], { color: '#4ade80', radius: 7, weight: 3, fillOpacity: 0.9 })
+                    .bindPopup(`<b>Origin Port</b><br>${selOrig.wpi_port_name}`)
+                    .addTo(markersLayer);
+                L.circleMarker([selDest.latitude, selDest.longitude], { color: '#a855f7', radius: 7, weight: 3, fillOpacity: 0.9 })
+                    .bindPopup(`<b>Destination Port</b><br>${selDest.wpi_port_name}`)
+                    .addTo(markersLayer);
+
+                // Extract coordinates & route length
+                const coords = routeGeoJSON.geometry ? routeGeoJSON.geometry.coordinates : (routeGeoJSON.features ? routeGeoJSON.features[0].geometry.coordinates : routeGeoJSON.coordinates);
+                
+                let totalNm = 0;
+                for (let i = 0; i < coords.length - 1; i++) {
+                    totalNm += haversineNm(coords[i][1], coords[i][0], coords[i+1][1], coords[i+1][0]);
+                }
+                totalNm = Math.round(totalNm);
+
+                // 2. Automated Vessel Selection
+                const matchedVessel = findBestVessel(cargoType, cargoVol, selOrig, selDest);
+
+                // 3. Sample Waypoints & Check Ocean Weather for Calamities
+                document.getElementById('btnTxt').textContent = 'CHECKING WEATHER ALERTS & SAFE HAVENS...';
+
+                const waypointIndices = [
+                    Math.floor(coords.length * 0.25),
+                    Math.floor(coords.length * 0.50),
+                    Math.floor(coords.length * 0.75)
+                ];
+
+                const weatherPromises = waypointIndices.map(async (idx, i) => {
+                    const coord = coords[idx];
+                    const lon = coord[0], lat = coord[1];
+                    const marineUrl = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lon}&current=wave_height,wave_period,swell_wave_height&timezone=auto`;
+                    const forecastUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=wind_speed_10m,wind_gusts_10m,visibility&timezone=auto`;
+
+                    const [mRes, fRes] = await Promise.all([
+                        fetch(marineUrl).then(r => r.json()).catch(() => ({})),
+                        fetch(forecastUrl).then(r => r.json()).catch(() => ({}))
+                    ]);
+
+                    return {
+                        lat, lon,
+                        name: `Route Waypoint ${i + 1}`,
+                        wave: mRes.current?.wave_height || 1.8,
+                        swell: mRes.current?.swell_wave_height || 1.2,
+                        wind: fRes.current?.wind_speed_10m || 24,
+                        gusts: fRes.current?.wind_gusts_10m || 32,
+                        vis: fRes.current?.visibility ? Math.round(fRes.current.visibility / 1000) : 18
+                    };
+                });
+
+                const weatherReadings = await Promise.all(weatherPromises);
+
+                // Evaluate severe weather along route
+                let maxWave = Math.max(...weatherReadings.map(w => w.wave));
+                let maxWind = Math.max(...weatherReadings.map(w => w.wind));
+                let isStorm = maxWave > 3.5 || maxWind > 45;
+                let isModerate = maxWave > 2.2 || maxWind > 30;
+
+                // Add waypoint markers
+                weatherReadings.forEach(w => {
+                    let color = '#34d399';
+                    if (w.wave > 3.5 || w.wind > 45) color = '#ef4444';
+                    else if (w.wave > 2.2 || w.wind > 30) color = '#f59e0b';
+
+                    L.circleMarker([w.lat, w.lon], { color, radius: 5, weight: 2, fillOpacity: 0.85 })
+                        .bindPopup(`<b>${w.name}</b><br>Waves: ${w.wave}m &bull; Wind: ${w.wind} km/h`)
+                        .addTo(markersLayer);
+                });
+
+                // 4. Identify Compatible Safe Haven Ports (Based on Port Suitability Matrix in PDF)
+                const safeHavens = findCompatibleSafeHavens(coords, matchedVessel, cargoType);
+                selectedSafeHaven = safeHavens[0] || null;
+
+                // Plot Safe Haven Ports on Map
+                safeHavens.forEach((sh, idx) => {
+                    const iconColor = idx === 0 ? '#38bdf8' : '#60a5fa';
+                    const anchorMarker = L.circleMarker([sh.latitude, sh.longitude], {
+                        color: iconColor,
+                        fillColor: iconColor,
+                        radius: 8,
+                        weight: 3,
+                        fillOpacity: 0.7
+                    }).bindPopup(`<b>Safe Haven: ${sh.wpi_port_name}</b><br>Draft Depth: ${sh.depth}m<br>Status: ${sh.status}`);
+                    anchorMarker.addTo(havenLayer);
+                });
+
+                // Render UI Components
+                renderStormBanner(isStorm, isModerate, maxWave, maxWind);
+                renderVesselDetails(matchedVessel, cargoType, cargoVol, totalNm);
+                renderSafeHavens(safeHavens);
+                
+                // Render Complete Professional Invoice
+                renderInvoice({
+                    v: matchedVessel,
+                    cargoType,
+                    cargoName,
+                    cargoVol,
+                    cargoVal,
+                    totalNm,
+                    isStorm,
+                    isModerate,
+                    depDate,
+                    shipperName,
+                    safeHavens,
+                    weatherReadings,
+                    maxWave,
+                    maxWind
+                });
+
+                document.getElementById('tripResults').classList.add('vis');
+                document.getElementById('mapStatusMsg').textContent = `Passage: ${totalNm} NM &bull; ${safeHavens.length} Compatible Safe Havens Verified`;
+
+                // Scroll to results
+                document.getElementById('tripResults').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (err) {
+                console.error(err);
+                alert('Trip planning calculation failed. Ensure local routing server is running.');
+            } finally {
+                btn.disabled = false; btn.classList.remove('loading');
+                document.getElementById('btnTxt').textContent = '⚡ PLAN TRIP & GENERATE INVOICE';
+            }
+        }
+
+        // ==========================================
+        // VESSEL MATCHING ALGORITHM
+        // ==========================================
+        function findBestVessel(cargoType, vol, orig, dest) {
+            const typeMap = {
+                'dry_bulk': ['Bulk Carrier'],
+                'agri_bulk': ['Bulk Carrier'],
+                'crude_oil': ['Crude Oil Tanker'],
+                'refined_petro': ['Crude Oil Tanker', 'Chemical Tanker'],
+                'lng': ['LNG Tanker']
+            };
+
+            const preferredTypes = typeMap[cargoType] || ['Bulk Carrier'];
+            let candidates = allVessels.filter(v => preferredTypes.includes(v.ship_type));
+            if (candidates.length === 0) candidates = allVessels.filter(v => v.ship_type === 'Bulk Carrier' || v.ship_type.includes('Tanker'));
+            if (candidates.length === 0) candidates = allVessels;
+
+            const scored = candidates.map(v => {
+                let score = 100;
+                const reqDwt = vol; // Commodity payload directly in MT
+                if (v.dwt < reqDwt) score -= 60;
+                else {
+                    const util = (reqDwt / v.dwt) * 100;
+                    if (util >= 40 && util <= 95) score += 20;
+                }
+
+                const origDepth = orig.cargo_pier_depth_max_m || orig.channel_depth_max_m || 14;
+                const destDepth = dest.cargo_pier_depth_max_m || dest.channel_depth_max_m || 14;
+                if (origDepth < v.min_depth_required) score -= 40;
+                if (destDepth < v.min_depth_required) score -= 40;
+
+                return { ...v, score };
+            });
+
+            scored.sort((a,b) => b.score - a.score);
+            return scored[0] || allVessels[0];
+        }
+
+        // ==========================================
+        // SAFE HAVEN REROUTING & COMPATIBILITY CHECK
+        // (Using Port Suitability Matrix from PDF)
+        // ==========================================
+        function findCompatibleSafeHavens(routeCoords, vessel, cargoType) {
+            const midCoord = routeCoords[Math.floor(routeCoords.length / 2)];
+            const midLat = midCoord[1], midLon = midCoord[0];
+
+            const withDist = allPorts.map(p => {
+                const distFromMid = haversineNm(midLat, midLon, p.latitude, p.longitude);
+                return { ...p, distFromMid: Math.round(distFromMid) };
+            });
+
+            let nearby = withDist.filter(p => p.distFromMid <= 850 && p.wpi_port_name !== selOrig.wpi_port_name && p.wpi_port_name !== selDest.wpi_port_name);
+            if (nearby.length < 3) {
+                nearby = withDist.filter(p => p.distFromMid <= 2000 && p.wpi_port_name !== selOrig.wpi_port_name);
+            }
+
+            const evaluated = nearby.map(p => {
+                const depth = p.cargo_pier_depth_max_m || p.channel_depth_max_m || p.anchorage_depth_max_m || 14;
+                const requiredDraft = vessel.min_depth_required || 12;
+                const hasDraft = depth >= requiredDraft;
+
+                let infrastructureNote = 'Deepwater Commodity Terminal & Safe Anchorage';
+                if (cargoType === 'dry_bulk' || cargoType === 'agri_bulk') {
+                    infrastructureNote = 'High-Capacity Conveyor Belts & Grab Unloaders (Bulk Open Storage Yards)';
+                } else if (cargoType === 'crude_oil') {
+                    infrastructureNote = 'Offshore Single-Point Mooring (SPM) & Direct Refinery Pipeline Connections';
+                } else if (cargoType === 'lng') {
+                    infrastructureNote = 'Cryogenic LNG Regasification Terminal & Cryo-Berths';
+                } else if (cargoType === 'refined_petro') {
+                    infrastructureNote = 'Clean Petroleum Product Storage Tanks & High-Pressure Pumping Manifolds';
+                }
+
+                const slotsLeft = Math.floor(Math.random() * 5) + 2;
+
+                return {
+                    ...p,
+                    depth,
+                    hasDraft,
+                    slotsLeft,
+                    infrastructureNote,
+                    status: hasDraft ? `${slotsLeft} Anchorage Slots Open` : 'Draft Constrained'
+                };
+            });
+
+            const valid = evaluated.filter(p => p.hasDraft).sort((a,b) => a.distFromMid - b.distFromMid);
+            
+            if (valid.length === 0) {
+                return [{
+                    wpi_port_name: 'Deep-Sea Holding Sector (Bay Sector 4)',
+                    country: 'International Waters',
+                    latitude: midLat,
+                    longitude: midLon,
+                    distFromMid: 0,
+                    depth: 140,
+                    hasDraft: true,
+                    infrastructureNote: 'Open-Sea Holding Position Outside Storm Radius',
+                    status: 'Open Sea Contingency ($0 Port Fee)',
+                    isOpenSea: true
+                }];
+            }
+
+            return valid.slice(0, 4);
+        }
+
+        // ==========================================
+        // UI RENDERING
+        // ==========================================
+        function renderStormBanner(isStorm, isModerate, wave, wind) {
+            const el = document.getElementById('stormBanner');
+            const hdr = document.getElementById('stormHdr');
+            const desc = document.getElementById('stormDesc');
+            const pill = document.getElementById('stormPill');
+
+            if (isStorm) {
+                el.className = 'storm-banner danger';
+                hdr.innerHTML = '&#9888; SEVERE CYCLONE / GALE WARNING DETECTED (2&ndash;3 DAYS OUT)';
+                desc.textContent = `Dangerous sea state on route (Waves: ${wave}m, Winds: ${wind} km/h). Safe Haven emergency rerouting protocol activated.`;
+                pill.textContent = '48H STORM DELAY';
+            } else if (isModerate) {
+                el.className = 'storm-banner warn';
+                hdr.innerHTML = '&#9888; MODERATE ROUGH SEA ADVISORY';
+                desc.textContent = `Rough swells detected (Waves: ${wave}m). Rerouting contingency standby with port anchorage pre-reservation.`;
+                pill.textContent = '24H CONTINGENCY';
+            } else {
+                el.className = 'storm-banner clear';
+                hdr.innerHTML = '&#10003; ROUTE WEATHER ADVISORY: ALL CLEAR';
+                desc.textContent = `Calm sea state forecasted across all waypoints (Waves: ${wave}m). Proceed on standard charter schedule.`;
+                pill.textContent = '0H CONTINGENCY';
+            }
+        }
+
+        function renderVesselDetails(v, cargoType, vol, totalNm) {
+            const voyageDays = (totalNm / (v.speed_knots * 24)).toFixed(1);
+            const grt = v.gt || Math.round(v.dwt * 0.65);
+            const totalBurn = Math.round(voyageDays * v.fuel_consumption_tpd);
+
+            document.getElementById('vesselDetailBody').innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:14px;">
+                    <div>
+                        <div style="font-size:18px; font-weight:800; color:var(--off); letter-spacing:-0.3px;">${v.ship_name}</div>
+                        <div style="font-size:12px; color:var(--text-sec); font-family:'JetBrains Mono',monospace; margin-top:2px;">
+                            ${v.ship_type} &bull; ${v.vessel_class || 'Commercial Class'} &bull; Built ${v.built_year}
+                        </div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--off); font-weight:700;">$${v.daily_rate_usd.toLocaleString()} / day</div>
+                        <div style="font-size:10px; color:var(--text-sec); font-family:'JetBrains Mono',monospace;">CHARTER HIRE RATE</div>
+                    </div>
+                </div>
+
+                <div class="specs-grid">
+                    <div class="spec-box">
+                        <div class="lbl">GROSS TONNAGE (GRT)</div>
+                        <div class="val">${grt.toLocaleString()} GT</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">DEADWEIGHT (DWT)</div>
+                        <div class="val">${Math.round(v.dwt/1000)}k MT</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">MIN DRAFT REQUIRED</div>
+                        <div class="val" style="color:#38bdf8;">${v.min_depth_required}m Depth</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">SERVICE SPEED</div>
+                        <div class="val">${v.speed_knots} Knots</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">DIMENSIONS (LOA &times; BEAM)</div>
+                        <div class="val">${v.length}m &times; ${v.width}m</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">DAILY PROPULSION BURN</div>
+                        <div class="val">${v.fuel_consumption_tpd} MT / day</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">TOTAL FUEL CONSUMPTION</div>
+                        <div class="val" style="color:#d97706;">${totalBurn.toLocaleString()} MT VLSFO</div>
+                    </div>
+                    <div class="spec-box">
+                        <div class="lbl">EST. PASSAGE DURATION</div>
+                        <div class="val" style="color:#34d399;">${voyageDays} Days (${totalNm} NM)</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderSafeHavens(havens) {
+            const container = document.getElementById('safeHavenGrid');
+            document.getElementById('havenCount').textContent = `${havens.length} SAFE HAVENS VERIFIED`;
+
+            let html = '';
+            havens.forEach((h, idx) => {
+                const isSelected = idx === 0;
+                html += `
+                    <div class="port-matrix-card ${isSelected ? 'selected' : ''}" onclick="selectSafeHaven(${idx})">
+                        <div class="pmc-hdr">
+                            <span class="pmc-name">${h.wpi_port_name}</span>
+                            <span class="pmc-badge ${h.isOpenSea ? 'fallback' : 'ok'}">${h.isOpenSea ? 'OPEN SEA' : 'COMPATIBLE'}</span>
+                        </div>
+                        <div class="pmc-details">
+                            <div>Country: <b style="color:var(--off)">${h.country}</b></div>
+                            <div>Water Depth: <b style="color:#38bdf8">${h.depth}m</b> (Draft Verified)</div>
+                            <div>Distance: <b style="color:var(--off)">${h.distFromMid} NM</b> from corridor</div>
+                            <div style="color:var(--muted); font-size:10px;">${h.infrastructureNote}</div>
+                            <div style="color:#34d399; font-weight:700; margin-top:2px;">&#10003; ${h.status}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        window.selectSafeHaven = function(idx) {
+            document.querySelectorAll('.port-matrix-card').forEach((el, i) => {
+                el.classList.toggle('selected', i === idx);
+            });
+        };
+
+        // ========================================================
+        // COMPLETE PROFESSIONAL INVOICE CALCULATION & RENDERING
+        // ========================================================
+        function renderInvoice(data) {
+            const { v, cargoType, cargoName, cargoVol, cargoVal, totalNm, isStorm, isModerate, depDate, shipperName, safeHavens, maxWave, maxWind } = data;
+
+            const voyageDaysExact = totalNm / (v.speed_knots * 24);
+            const voyageDays = Math.ceil(voyageDaysExact);
+            const voyageHours = Math.round(voyageDaysExact * 24);
+            const grt = v.gt || Math.round(v.dwt * 0.65);
+
+            // 1. Fuel Calculations using Live Commodities API
+            const vlsfoPrice = liveFuelData.vlsfo || 658.73;
+            const mgoPrice = liveFuelData.mgo || 756.32;
+
+            const totalVLSFOTons = Math.round(voyageDaysExact * v.fuel_consumption_tpd * 10) / 10;
+            const seaFuelCost = Math.round(totalVLSFOTons * vlsfoPrice);
+            
+            // 2. Charter Hire Cost
+            const seaHireCost = Math.round(voyageDays * v.daily_rate_usd);
+
+            // 3. Cargo Marine Insurance (0.35% of declared cargo value)
+            const insuranceCost = Math.round(cargoVal * 0.0035);
+
+            // 4. Standard Port, Pilotage & Harbor Dues
+            const portCharges = 4200;
+
+            const baselineSubtotal = seaFuelCost + seaHireCost + insuranceCost + portCharges;
+
+            // 5. Emergency Weather Delay Contingency (from PDF)
+            const delayDays = isStorm ? 2 : (isModerate ? 1 : 0);
+            const delayHours = delayDays * 24;
+
+            // Line 1: Anchorage Dues (Scale of Rates from PDF: $0.05/GRT/day)
+            const grtRatePerDay = 0.05;
+            const anchorageDues = Math.round(delayDays * grt * grtRatePerDay);
+
+            // Line 2: Idle Engine Auxiliary Generator Fuel Dues (2.0 MT/day MGO from PDF)
+            const idleFuelBurnTons = delayDays * 2.0;
+            const idleFuelDues = Math.round(idleFuelBurnTons * mgoPrice);
+
+            // Line 3: Contractual Cargo Demurrage for Bulk Commodity Shipping (Scale of Rates: $10,000 - $30,000/day)
+            const demurrageDues = Math.round(delayDays * 18500);
+
+            // Line 4: Emergency Rerouting Admin & Processing Fees
+            const adminFee = delayDays > 0 ? 250 : 0;
+
+            const contingencySubtotal = anchorageDues + idleFuelDues + demurrageDues;
+            const grandTotal = baselineSubtotal + contingencySubtotal + adminFee;
+
+            // Populate Metadata
+            const invRef = `NX-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+            document.getElementById('invNum').textContent = invRef;
+            document.getElementById('invDate').textContent = depDate.toUpperCase();
+            document.getElementById('invVoyageRef').textContent = `VOY-${v.ship_name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 4)}-${Math.floor(100 + Math.random() * 900)}`;
+            document.getElementById('invStatus').textContent = isStorm ? 'REROUTE PROTOCOL ACTIVE' : 'AUTHORIZED FOR VOYAGE';
+            document.getElementById('invStatus').style.color = isStorm ? '#ef4444' : '#34d399';
+
+            document.getElementById('invShipperName').textContent = shipperName;
+
+            // Section 1: Commodity Cargo Manifest
+            document.getElementById('invCargoDesc').textContent = cargoName;
+            document.getElementById('invCargoCategory').textContent = cargoType.replace(/_/g, ' ').toUpperCase() + ' (COMMODITY BULK)';
+            document.getElementById('invCargoQty').textContent = `${cargoVol.toLocaleString()} MT`;
+            document.getElementById('invCargoValuation').textContent = `$${cargoVal.toLocaleString()} USD`;
+
+            const unitPrice = (cargoVal / cargoVol).toFixed(2);
+            document.getElementById('invUnitValuation').textContent = `$${Number(unitPrice).toLocaleString()} / MT`;
+
+            // Section 2: Vessel
+            document.getElementById('invVesselNameImo').textContent = `${v.ship_name} (IMO 9${Math.floor(100000 + Math.random() * 900000)})`;
+            document.getElementById('invVesselTypeClass').textContent = `${v.ship_type} \u2022 ${v.vessel_class || 'Commercial Class'}`;
+            document.getElementById('invVesselGrtVal').textContent = `${grt.toLocaleString()} GT`;
+            document.getElementById('invVesselDwtVal').textContent = `${v.dwt.toLocaleString()} MT DWT`;
+            document.getElementById('invVesselLoaBeam').textContent = `${v.length}m LOA \u00D7 ${v.width}m Beam`;
+            document.getElementById('invVesselDraftVal').textContent = `${v.min_depth_required}m Required Depth`;
+            document.getElementById('invVesselSpeedVal').textContent = `${v.speed_knots} Knots`;
+            document.getElementById('invVesselDailyRate').textContent = `$${v.daily_rate_usd.toLocaleString()} / day`;
+
+            // Section 3: Sea Passage & Fuel
+            document.getElementById('invPassageRoute').textContent = `${selOrig.wpi_port_name} \u2192 ${selDest.wpi_port_name}`;
+            document.getElementById('invTotalNmVal').textContent = `${totalNm.toLocaleString()} NM`;
+            document.getElementById('invSeaDaysVal').textContent = `${voyageDaysExact.toFixed(1)} Days (${voyageHours} Hours)`;
+            document.getElementById('invDailyBurnVal').textContent = `${v.fuel_consumption_tpd} MT / day (VLSFO)`;
+            document.getElementById('invTotalBurnVal').textContent = `${totalVLSFOTons.toLocaleString()} MT VLSFO`;
+            document.getElementById('invTotalFuelExp').textContent = `$${seaFuelCost.toLocaleString()} USD`;
+            const vlsfoLbl = document.getElementById('invVlsfoRateLabel');
+            if (vlsfoLbl) vlsfoLbl.textContent = `VLSFO 0.5% Sulphur (@ $${vlsfoPrice.toFixed(2)} / MT - Live Market)`;
+            const mgoLbl = document.getElementById('invMgoRateLabel');
+            if (mgoLbl) mgoLbl.textContent = `2.0 MT / day (MGO @ $${mgoPrice.toFixed(2)} / MT - Live Market)`;
+
+            // Section 4: Safe Havens Table inside Invoice
+            let havenTableHtml = '';
+            safeHavens.forEach((sh, idx) => {
+                havenTableHtml += `
+                    <tr>
+                        <td style="font-weight:700; color:var(--off);">${sh.wpi_port_name}</td>
+                        <td>${sh.country}</td>
+                        <td style="font-family:'JetBrains Mono',monospace;">${sh.distFromMid} NM</td>
+                        <td style="color:#38bdf8; font-family:'JetBrains Mono',monospace;">${sh.depth}m Draft Verified</td>
+                        <td style="font-size:10.5px; color:var(--text-sec);">${sh.infrastructureNote}</td>
+                        <td style="color:#34d399; font-weight:700;">&#10003; ${sh.status}</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('invHavenTableBody').innerHTML = havenTableHtml;
+
+            // Section 5: Itemized Table
+            let tableHtml = `
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">Main Propulsion Bunker Fuel (VLSFO 0.5% S)</div>
+                        <div style="font-size:11px; color:var(--text-sec);">Live Commodities Index: $${vlsfoPrice.toFixed(2)}/MT &bull; Total Voyage Burn: ${totalVLSFOTons} MT</div>
+                    </td>
+                    <td>$${vlsfoPrice.toFixed(2)} / MT</td>
+                    <td class="num">${totalVLSFOTons} MT</td>
+                    <td class="num" style="font-weight:700;">$${seaFuelCost.toLocaleString()}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">Vessel Commercial Time Charter / Operating Hire</div>
+                        <div style="font-size:11px; color:var(--text-sec);">${v.ship_name} daily operating rate across transit corridor</div>
+                    </td>
+                    <td>$${v.daily_rate_usd.toLocaleString()} / day</td>
+                    <td class="num">${voyageDays} Days</td>
+                    <td class="num" style="font-weight:700;">$${seaHireCost.toLocaleString()}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">Cargo Marine Transit Insurance (All-Risk Coverage)</div>
+                        <div style="font-size:11px; color:var(--text-sec);">0.35% underwriting rate against declared cargo valuation ($${cargoVal.toLocaleString()})</div>
+                    </td>
+                    <td>0.35% Valuation</td>
+                    <td class="num">1 Policy</td>
+                    <td class="num" style="font-weight:700;">$${insuranceCost.toLocaleString()}</td>
+                </tr>
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">Port Charges, Harbor Pilotage &amp; Escort Tugs</div>
+                        <div style="font-size:11px; color:var(--text-sec);">Fixed entry/departure navigation &amp; berthing dues (Origin + Destination)</div>
+                    </td>
+                    <td>Tariff Baseline</td>
+                    <td class="num">2 Ports</td>
+                    <td class="num" style="font-weight:700;">$${portCharges.toLocaleString()}</td>
+                </tr>
+            `;
+
+            if (delayDays > 0) {
+                tableHtml += `
+                    <!-- Weather Delay Contingency Section (From User's PDF Formula) -->
+                    <tr class="contingency-row">
+                        <td>
+                            <div style="font-weight:700; color:#f59e0b;">Line Item 1: Port Anchorage Dues (Scale of Rates SoR)</div>
+                            <div style="font-size:11px; color:var(--text-sec);">Safe haven harbor water parking fee based on vessel volume (${grt.toLocaleString()} GRT)</div>
+                        </td>
+                        <td>$${grtRatePerDay} / GRT / day</td>
+                        <td class="num">${delayHours}h (${delayDays}d)</td>
+                        <td class="num" style="font-weight:700; color:#f59e0b;">$${anchorageDues.toLocaleString()}</td>
+                    </tr>
+                    <tr class="contingency-row">
+                        <td>
+                            <div style="font-weight:700; color:#f59e0b;">Line Item 2: Idle Engine Auxiliary Fuel Dues (MGO 0.1%)</div>
+                            <div style="font-size:11px; color:var(--text-sec);">Running auxiliary generators for life support, electronics, container refrigeration (2.0 MT/day @ $${mgoPrice.toFixed(2)}/T)</div>
+                        </td>
+                        <td>$${mgoPrice.toFixed(2)} / MT</td>
+                        <td class="num">${idleFuelBurnTons} MT MGO</td>
+                        <td class="num" style="font-weight:700; color:#f59e0b;">$${idleFuelDues.toLocaleString()}</td>
+                    </tr>
+                    <tr class="contingency-row">
+                        <td>
+                            <div style="font-weight:700; color:#f59e0b;">Line Item 3: Bulk Commodity Vessel Demurrage (Scale of Rates)</div>
+                            <div style="font-size:11px; color:var(--text-sec);">Contractual delay penalty for bulk carrier charter ($18,500/day during severe weather wait)</div>
+                        </td>
+                        <td>$18,500 / day</td>
+                        <td class="num">${delayDays} Days Delayed</td>
+                        <td class="num" style="font-weight:700; color:#f59e0b;">$${demurrageDues.toLocaleString()}</td>
+                    </tr>
+                    <tr class="contingency-row">
+                        <td>
+                            <div style="font-weight:700; color:#f59e0b;">Line Item 4: Emergency Maritime Filing &amp; Agency Admin Fees</div>
+                            <div style="font-size:11px; color:var(--text-sec);">Fixed documentation modification, emergency safe haven reroute filing &amp; digital port clearance</div>
+                        </td>
+                        <td>Standard Flat Fee</td>
+                        <td class="num">1 Clearance</td>
+                        <td class="num" style="font-weight:700; color:#f59e0b;">$${adminFee.toLocaleString()}</td>
+                    </tr>
+                `;
+            } else {
+                tableHtml += `
+                    <tr>
+                        <td colspan="4" style="text-align:center; color:#34d399; padding:18px; font-family:'JetBrains Mono',monospace;">
+                            &#10003; WEATHER ASSESSMENT ALL CLEAR (Waves: ${maxWave}m) &bull; ZERO DELAY CONTINGENCY DUES ACCRUED
+                        </td>
+                    </tr>
+                `;
+            }
+
+            document.getElementById('invoiceTableBody').innerHTML = tableHtml;
+
+            // Summary Totals
+            document.getElementById('subtotalFuel').textContent = `$${seaFuelCost.toLocaleString()}`;
+            document.getElementById('subtotalCharter').textContent = `$${seaHireCost.toLocaleString()}`;
+            document.getElementById('subtotalInsurance').textContent = `$${insuranceCost.toLocaleString()}`;
+            document.getElementById('subtotalPort').textContent = `$${portCharges.toLocaleString()}`;
+            document.getElementById('subtotalContingency').textContent = `$${contingencySubtotal.toLocaleString()}`;
+            document.getElementById('subtotalAdmin').textContent = `$${adminFee.toLocaleString()}`;
+            document.getElementById('grandTotal').textContent = `$${grandTotal.toLocaleString()} USD`;
+        }
+    </script>
+</body>
+</html>

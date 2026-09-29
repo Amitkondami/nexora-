@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Nexora Freight — Global Logistics &amp; Supply Chain Solutions</title>
+    <meta name="description"
+        content="Nexora Freight provides global ocean, air, road and rail logistics, freight forwarding, supply-chain visibility and transportation solutions.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+
+<body>
+
+    <nav id="nav" aria-label="Primary">
+        <div class="wrap row">
+            <div class="logo">NEXORA<span>FREIGHT</span></div>
+            <ul class="nav-links">
+                <li><a href="#services">SERVICES</a></li>
+                <li><a href="#">NETWORK</a></li>
+                <li><a href="#">INDUSTRIES</a></li>
+                <li><a href="#">TRACK SHIPMENT</a></li>
+            </ul>
+            <div class="nav-right">
+                <span class="status"><span class="dot"></span>OPERATIONS ONLINE</span>
+                <button class="btn btn-ghost" id="signInBtn" type="button" style="cursor:pointer">SIGN IN</button>
+                <a href="trip_invoice.html" class="btn btn-primary">GET A QUOTE <span class="arrow">→</span></a>
+
+                <!-- User Profile (hidden until login) -->
+                <div class="profile-wrapper" id="profileWrapper" style="display:none">
+                    <button class="profile-avatar" id="profileAvatar" type="button" aria-label="User menu"></button>
+                    <div class="profile-dropdown" id="profileDropdown">
+                        <div class="profile-header" id="profileHeader">
+                            <div class="profile-avatar-lg" id="profileAvatarLg"></div>
+                            <div class="profile-info">
+                                <div class="profile-name" id="profileName"></div>
+                                <div class="profile-email" id="profileEmail"></div>
+                            </div>
+                        </div>
+                        <div class="profile-divider"></div>
+                        <a href="dashboard.html" class="profile-item" id="profileDashboard">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <rect x="3" y="3" width="7" height="7" />
+                                <rect x="14" y="3" width="7" height="7" />
+                                <rect x="3" y="14" width="7" height="7" />
+                                <rect x="14" y="14" width="7" height="7" />
+                            </svg>
+                            Dashboard
+                        </a>
+                        <button class="profile-item profile-logout" id="profileLogout" type="button">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
+                                <polyline points="16 17 21 12 16 7" />
+                                <line x1="21" y1="12" x2="9" y2="12" />
+                            </svg>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+
+                <button class="mobile-toggle">MENU</button>
+            </div>
+        </div>
+    </nav>
+
+    <header class="hero">
+        <div class="hero-video" aria-hidden="true"><canvas id="oceanScene"></canvas>
+            <div class="grain"></div>
+        </div>
+        <div class="wrap">
+            <div class="eyebrow mono"><span>GLOBAL FREIGHT &amp; LOGISTICS</span><span>EST. 2008</span></div>
+            <div class="hero-inner">
+                <div>
+                    <h1 class="headline">Move<br>what<br><em>matters.</em></h1>
+                    <p class="hero-sub">Nexora Freight coordinates ocean, air, road and rail movement for companies who
+                        cannot afford uncertainty in their supply chain.</p>
+                    <div class="hero-ctas">
+                        <a href="#" class="btn btn-primary">REQUEST A QUOTE <span class="arrow">→</span></a>
+                        <a href="#" class="btn btn-ghost">TRACK SHIPMENT <span class="arrow">↗</span></a>
+                    </div>
+                </div>
+                <div class="hud-col mono">
+                    <div class="item">
+                        <div class="label">GLOBAL NETWORK</div>
+                        <div class="val">86 countries</div>
+                    </div>
+                    <div class="item">
+                        <div class="label">ANNUAL VOLUME</div>
+                        <div class="val">1.8M+ TEU</div>
+                    </div>
+                    <div class="item">
+                        <div class="label">ON-TIME PERFORMANCE</div>
+                        <div class="val">98.7%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="scroll-cue"><span>SCROLL TO EXPLORE</span><span class="line"></span></div>
+    </header>
+
+    <div class="modal-overlay" id="signInOverlay" role="dialog" aria-modal="true" aria-labelledby="signInTitle">
+        <div class="modal">
+            <button class="modal-close" id="signInClose" aria-label="Close sign in">×</button>
+            <div class="eyebrow-sm mono">NEXORA FREIGHT · CLIENT PORTAL</div>
+            <h3 id="signInTitle">Sign in to your account</h3>
+
+            <form class="modal-form" id="signInForm" novalidate>
+                <!-- Google Sign-In Button (rendered by Google) -->
+                <div id="googleBtnContainer" class="google-btn-container"></div>
+
+                <div class="modal-divider">
+                    <span class="modal-divider-line"></span>
+                    <span class="modal-divider-text mono">OR</span>
+                    <span class="modal-divider-line"></span>
+                </div>
+
+                <div class="field" id="emailField">
+                    <label for="signInEmail">Work email</label>
+                    <input type="email" id="signInEmail" autocomplete="email" placeholder="you@company.com">
+                    <div class="field-error">Enter a valid email address.</div>
+                </div>
+                <div class="field" id="passField">
+                    <label for="signInPass">Password</label>
+                    <input type="password" id="signInPass" autocomplete="current-password" placeholder="••••••••">
+                    <div class="field-error">Password must be at least 6 characters.</div>
+                </div>
+                <button type="submit" class="modal-submit">SIGN IN →</button>
+                <p class="modal-switch">No account yet? <button type="button" id="toRegister">Request access</button>
+                </p>
+            </form>
+
+            <div class="modal-success" id="signInSuccess">
+                <div class="check">✓</div>
+                <h3 style="font-size:18px;margin-bottom:8px">You're signed in</h3>
+                <p style="color:var(--text-sec);font-size:13px">Redirecting to your operations dashboard…</p>
+            </div>
+        </div>
+    </div>
+
+    <section class="intro">
+        <div class="wrap intro-grid">
+            <div class="intro-label mono">01 / ABOUT NEXORA</div>
+            <div>
+                <h2 class="statement">Logistics is not about moving goods. <span class="fade">It is about moving
+                        business.</span></h2>
+                <p class="intro-para">We coordinate freight, infrastructure and information across borders to keep
+                    modern supply chains moving — treating every handoff as a point that can either cost you time or
+                    save it.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="services" id="services">
+        <div class="wrap">
+            <div class="services-head">
+                <h2 class="services-title">One network. <span class="muted">Every mode.</span></h2>
+                <p class="services-note">Five operational tools, coordinated as a single layer. Hover to preview, click
+                    to expand.</p>
+            </div>
+
+            <div id="serviceList">
+                <div class="service-row" data-preview="OCEAN VESSEL">
+                    <span class="num mono">01</span>
+                    <div class="titles">
+                        <h3>Ocean Freight</h3>
+                        <p class="desc">Global ocean freight solutions across major trade corridors, from FCL to
+                            consolidated LCL.</p>
+                    </div>
+                    <span class="arrow">↗</span>
+                </div>
+                <a href="ports_network.html" class="service-row" data-preview="PORT NETWORK" style="cursor:pointer;text-decoration:none;color:inherit;display:flex;align-items:center;gap:24px;">
+                    <span class="num mono">02</span>
+                    <div class="titles">
+                        <h3>Ports</h3>
+                        <p class="desc">Live congestion and berth status across our partner port network, so delays are
+                            visible before they cost you.</p>
+                    </div>
+                    <span class="arrow">↗</span>
+                </a>
+                <a href="vessel_match.html" class="service-row" data-preview="VESSEL TRACKING" style="cursor:pointer;text-decoration:none;color:inherit;display:flex;align-items:center;gap:24px;">
+                    <span class="num mono">03</span>
+                    <div class="titles">
+                        <h3>Vessels</h3>
+                        <p class="desc">Smart vessel recommendations based on your cargo type, volume and real port constraints from our global database.</p>
+                    </div>
+                    <span class="arrow">↗</span>
+                </a>
+                <a href="weather_forecast.html" class="service-row" data-preview="ROUTE WEATHER" style="cursor:pointer;text-decoration:none;color:inherit;display:flex;align-items:center;gap:24px;">
+                    <span class="num mono">04</span>
+                    <div class="titles">
+                        <h3>Weather Forecasting</h3>
+                        <p class="desc">Route-level weather and sea-state forecasting, flagged early so plans can adjust
+                            before disruption hits.</p>
+                    </div>
+                    <span class="arrow">↗</span>
+                </a>
+                <div class="service-row" data-preview="TRIP ESTIMATOR">
+                    <span class="num mono">05</span>
+                    <div class="titles">
+                        <h3>Calculate the Trip</h3>
+                        <p class="desc">Get an instant estimate for transit time based on mode, origin and destination.
+                        </p>
+                        <div class="calc">
+                            <div>
+                                <label for="calcMode">Mode</label>
+                                <select id="calcMode">
+                                    <option>Ocean</option>
+                                    <option>Air</option>
+                                    <option>Road</option>
+                                    <option>Rail</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="calcOrigin">Origin port/city</label>
+                                <input type="text" id="calcOrigin" placeholder="e.g. Mumbai">
+                            </div>
+                            <div>
+                                <label for="calcDest">Destination port/city</label>
+                                <input type="text" id="calcDest" placeholder="e.g. Rotterdam">
+                            </div>
+                            <button type="button" id="calcRun">CALCULATE →</button>
+                            <div class="calc-result mono" id="calcResult"></div>
+                        </div>
+                    </div>
+                    <span class="arrow">↗</span>
+                </div>
+            </div>
+        </div>
+        <div class="service-preview mono" id="preview"></div>
+    </section>
+
+    <!-- ============ HOW IT WORKS ============ -->
+    <section class="how-it-works" id="howItWorks">
+        <div class="wrap">
+            <div class="hiw-label mono">OPERATIONAL ARCHITECTURE</div>
+            <h2 class="hiw-title">How <span class="accent">NEXORA</span> Works</h2>
+            <p class="hiw-subtitle">A seamless 5-step logistics flow designed for global freight operations.</p>
+
+            <div class="hiw-timeline">
+                <!-- connecting line -->
+                <div class="hiw-line" aria-hidden="true">
+                    <div class="hiw-line-fill" id="hiwLineFill"></div>
+                </div>
+
+                <div class="hiw-step active" data-step="1">
+                    <div class="hiw-circle">
+                        <span class="hiw-num mono">01</span>
+                        <div class="hiw-pulse"></div>
+                    </div>
+                    <h3 class="hiw-step-title">Enter Cargo<br>Requirements</h3>
+                    <p class="hiw-step-desc">Specify origin, destination port, cargo type, volume and preferred
+                        schedule.</p>
+                </div>
+
+                <div class="hiw-step" data-step="2">
+                    <div class="hiw-circle">
+                        <span class="hiw-num mono">02</span>
+                        <div class="hiw-pulse"></div>
+                    </div>
+                    <h3 class="hiw-step-title">Match Vessel<br>& Route</h3>
+                    <p class="hiw-step-desc">Filter carriers by capacity, draft, mode compatibility and trade-lane
+                        coverage.</p>
+                </div>
+
+                <div class="hiw-step" data-step="3">
+                    <div class="hiw-circle">
+                        <span class="hiw-num mono">03</span>
+                        <div class="hiw-pulse"></div>
+                    </div>
+                    <h3 class="hiw-step-title">Optimize Route<br>& Schedule</h3>
+                    <p class="hiw-step-desc">Simulate weather, fuel burn, canal shortcuts and port congestion to find
+                        the fastest path.</p>
+                </div>
+
+                <div class="hiw-step" data-step="4">
+                    <div class="hiw-circle">
+                        <span class="hiw-num mono">04</span>
+                        <div class="hiw-pulse"></div>
+                    </div>
+                    <h3 class="hiw-step-title">Forecast<br>the Market</h3>
+                    <p class="hiw-step-desc">Project forward freight rate curves using real-time data and predictive AI
+                        models.</p>
+                </div>
+
+                <div class="hiw-step" data-step="5">
+                    <div class="hiw-circle">
+                        <span class="hiw-num mono">05</span>
+                        <div class="hiw-pulse"></div>
+                    </div>
+                    <h3 class="hiw-step-title">Get Your<br>Recommendation</h3>
+                    <p class="hiw-step-desc">Receive an actionable executive decision brief with cost estimates and risk
+                        ratings.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        const nav = document.getElementById('nav');
+        window.addEventListener('scroll', () => {
+            nav.classList.toggle('scrolled', window.scrollY > 40);
+        }, { passive: true });
+
+        const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        // ---- animated ocean / ship "video" scene ----
+        (function () {
+            const canvas = document.getElementById('oceanScene');
+            const ctx = canvas.getContext('2d');
+            let w, h, dpr = Math.min(window.devicePixelRatio || 1, 2);
+            function resize() {
+                w = canvas.parentElement.offsetWidth; h = canvas.parentElement.offsetHeight;
+                canvas.width = w * dpr; canvas.height = h * dpr;
+                canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            const waves = [
+                { amp: 8, len: 0.022, speed: .014, y: .66, color: 'rgba(38,32,27,0.55)' },
+                { amp: 13, len: 0.017, speed: .010, y: .74, color: 'rgba(24,20,17,0.75)' },
+                { amp: 18, len: 0.013, speed: .007, y: .83, color: 'rgba(14,12,10,0.92)' },
+                { amp: 26, len: 0.010, speed: .005, y: .94, color: 'rgba(8,8,7,1)' }
+            ];
+            const gulls = Array.from({ length: 4 }, (_, i) => ({ x: Math.random(), y: .22 + Math.random() * .12, s: .4 + Math.random() * .4, off: i * 1.7 }));
+            let t = 0;
+            let shipX = -0.18;
+            const smoke = [];
+
+            function drawSun() {
+                const sx = w * 0.7, sy = h * 0.28;
+                const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, w * 0.32);
+                glow.addColorStop(0, 'rgba(159,107,10,0.35)');
+                glow.addColorStop(1, 'rgba(159,107,10,0)');
+                ctx.fillStyle = glow;
+                ctx.fillRect(0, 0, w, h);
+            }
+
+            function drawGull(g) {
+                const x = ((g.x + t * 0.00006 * g.s) % 1.15) * w - 0.1 * w;
+                const y = g.y * h + Math.sin(t * 0.02 + g.off) * 4;
+                ctx.strokeStyle = 'rgba(200,190,180,0.35)';
+                ctx.lineWidth = 1.4;
+                ctx.beginPath();
+                ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y - 4, x + 6, y);
+                ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 4, x + 12, y);
+                ctx.stroke();
+            }
+
+            function drawDistantShip() {
+                const x = w * 0.18, y = h * 0.62;
+                ctx.fillStyle = 'rgba(20,17,15,0.55)';
+                ctx.fillRect(x - 38, y, 76, 7);
+                ctx.fillRect(x - 6, y - 14, 5, 14);
+            }
+
+            function drawShip(x, baseY) {
+                const sx = x * w, sy = baseY * h;
+                ctx.save();
+                ctx.translate(sx, sy);
+                // hull
+                ctx.fillStyle = 'rgba(26,22,19,0.96)';
+                ctx.beginPath();
+                ctx.moveTo(-100, 14); ctx.lineTo(100, 14); ctx.lineTo(82, 30); ctx.lineTo(-82, 30); ctx.closePath();
+                ctx.fill();
+                // containers
+                const colors = ['rgba(73,57,42,0.92)', 'rgba(102,103,103,0.85)', 'rgba(159,107,10,0.55)', 'rgba(52,44,36,0.92)'];
+                for (let i = 0; i < 6; i++) {
+                    ctx.fillStyle = colors[i % colors.length];
+                    ctx.fillRect(-84 + i * 29, -8, 24, 18);
+                }
+                // bridge + funnel
+                ctx.fillStyle = 'rgba(96,80,64,0.95)';
+                ctx.fillRect(68, -28, 16, 38);
+                ctx.fillStyle = 'rgba(40,33,27,0.95)';
+                ctx.fillRect(74, -42, 7, 16);
+                ctx.restore();
+
+                // funnel smoke
+                if (!reduced && Math.random() < 0.35) {
+                    smoke.push({ x: sx + 77, y: sy - 44, life: 0, r: 2 + Math.random() * 2 });
+                }
+            }
+
+            function drawSmoke() {
+                for (let i = smoke.length - 1; i >= 0; i--) {
+                    const p = smoke[i];
+                    p.life += 1; p.y -= 0.35; p.x += 0.12; p.r += 0.03;
+                    const alpha = Math.max(0, 0.18 - p.life * 0.0014);
+                    if (alpha <= 0) { smoke.splice(i, 1); continue; }
+                    ctx.fillStyle = `rgba(180,175,168,${alpha})`;
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
+                }
+            }
+
+            function frame() {
+                ctx.clearRect(0, 0, w, h);
+                const g = ctx.createLinearGradient(0, 0, 0, h);
+                g.addColorStop(0, '#0d0c0a'); g.addColorStop(.55, '#0a0908'); g.addColorStop(1, '#040403');
+                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+
+                drawSun();
+                gulls.forEach(drawGull);
+                drawDistantShip();
+
+                if (!reduced) { t += 1; shipX += 0.00022; if (shipX > 1.2) shipX = -0.2; }
+                drawShip(shipX, 0.68);
+                drawSmoke();
+
+                // fog band for depth
+                const fog = ctx.createLinearGradient(0, h * 0.55, 0, h * 0.78);
+                fog.addColorStop(0, 'rgba(10,9,8,0)'); fog.addColorStop(1, 'rgba(10,9,8,0.4)');
+                ctx.fillStyle = fog; ctx.fillRect(0, h * 0.5, w, h * 0.3);
+
+                waves.forEach((wave, i) => {
+                    ctx.beginPath();
+                    ctx.moveTo(0, h);
+                    for (let x = 0; x <= w; x += 8) {
+                        const y = wave.y * h + Math.sin(x * wave.len + t * wave.speed + i) * wave.amp;
+                        ctx.lineTo(x, y);
+                    }
+                    ctx.lineTo(w, h); ctx.closePath();
+                    ctx.fillStyle = wave.color;
+                    ctx.fill();
+                });
+
+                if (!reduced) requestAnimationFrame(frame);
+            }
+            frame();
+        })();
+
+        // ---- services accordion + cursor preview ----
+        const rows = document.querySelectorAll('.service-row');
+        const preview = document.getElementById('preview');
+        rows.forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('.calc')) return;
+                
+                // If it's the Ports Network rthaow, navigate to the new page
+                if (row.dataset.preview === 'PORT NETWORK') {
+                    window.location.href = 'ports_network.html';
+                    return;
+                }
+
+                const wasActive = row.classList.contains('active');
+                rows.forEach(r => r.classList.remove('active'));
+                if (!wasActive) row.classList.add('active');
+            });
+            row.addEventListener('mouseenter', () => {
+                preview.textContent = row.dataset.preview;
+                preview.classList.add('show');
+            });
+            row.addEventListener('mousemove', (e) => {
+                preview.style.left = (e.clientX + 24) + 'px';
+                preview.style.top = (e.clientY - 95) + 'px';
+            });
+            row.addEventListener('mouseleave', () => preview.classList.remove('show'));
+        });
+        rows[0].classList.add('active');
+
+        // ---- trip calculator ----
+        const calcRun = document.getElementById('calcRun');
+        if (calcRun) {
+            calcRun.addEventListener('click', () => {
+                const mode = document.getElementById('calcMode').value;
+                const origin = document.getElementById('calcOrigin').value.trim();
+                const dest = document.getElementById('calcDest').value.trim();
+                const result = document.getElementById('calcResult');
+                if (!origin || !dest) {
+                    result.textContent = 'Enter both an origin and a destination.';
+                    return;
+                }
+                const base = { Ocean: [12, 26], Air: [1, 3], Road: [2, 7], Rail: [4, 10] }[mode];
+                const days = base[0] + Math.floor(Math.random() * (base[1] - base[0]));
+                result.textContent = `${origin.toUpperCase()} → ${dest.toUpperCase()} · ${mode.toUpperCase()} · ESTIMATED TRANSIT ${days} DAYS`;
+            });
+        }
+
+        // ---- sign-in modal ----
+        const overlay = document.getElementById('signInOverlay');
+        const openBtn = document.getElementById('signInBtn');
+        const closeBtn = document.getElementById('signInClose');
+        const form = document.getElementById('signInForm');
+        const success = document.getElementById('signInSuccess');
+        const emailField = document.getElementById('emailField');
+        const passField = document.getElementById('passField');
+
+        // profile elements
+        const profileWrapper = document.getElementById('profileWrapper');
+        const profileAvatar = document.getElementById('profileAvatar');
+        const profileAvatarLg = document.getElementById('profileAvatarLg');
+        const profileDropdown = document.getElementById('profileDropdown');
+        const profileName = document.getElementById('profileName');
+        const profileEmail = document.getElementById('profileEmail');
+        const profileLogout = document.getElementById('profileLogout');
+
+        // ---- helpers ----
+        function getInitial(str) {
+            return str.charAt(0).toUpperCase();
+        }
+        function getUserName(email) {
+            const local = email.split('@')[0];
+            return local.charAt(0).toUpperCase() + local.slice(1).replace(/[._-]/g, ' ');
+        }
+
+        /**
+         * Show the profile avatar in the nav.
+         * @param {object} opts - { email, name?, picture? }
+         */
+        function showProfile(opts) {
+            const email = typeof opts === 'string' ? opts : opts.email;
+            const name = (typeof opts === 'object' && opts.name) ? opts.name : getUserName(email);
+            const picture = (typeof opts === 'object' && opts.picture) ? opts.picture : null;
+
+            // Small avatar in nav
+            if (picture) {
+                profileAvatar.textContent = '';
+                profileAvatar.style.backgroundImage = `url(${picture})`;
+                profileAvatar.style.backgroundSize = 'cover';
+                profileAvatar.style.backgroundPosition = 'center';
+                profileAvatar.classList.add('has-photo');
+            } else {
+                profileAvatar.textContent = getInitial(name || email);
+                profileAvatar.style.backgroundImage = '';
+                profileAvatar.classList.remove('has-photo');
+            }
+
+            // Large avatar in dropdown
+            if (picture) {
+                profileAvatarLg.textContent = '';
+                profileAvatarLg.style.backgroundImage = `url(${picture})`;
+                profileAvatarLg.style.backgroundSize = 'cover';
+                profileAvatarLg.style.backgroundPosition = 'center';
+            } else {
+                profileAvatarLg.textContent = getInitial(name || email);
+                profileAvatarLg.style.backgroundImage = '';
+            }
+
+            profileName.textContent = name;
+            profileEmail.textContent = email;
+            openBtn.style.display = 'none';
+            profileWrapper.style.display = 'block';
+        }
+
+        function hideProfile() {
+            profileWrapper.style.display = 'none';
+            profileDropdown.classList.remove('open');
+            profileAvatar.style.backgroundImage = '';
+            profileAvatar.classList.remove('has-photo');
+            profileAvatarLg.style.backgroundImage = '';
+            openBtn.style.display = '';
+            sessionStorage.removeItem('nexora_user');
+            sessionStorage.removeItem('nexora_user_data');
+        }
+
+        // ---- restore session on page load ----
+        const savedUserData = sessionStorage.getItem('nexora_user_data');
+        const savedUser = sessionStorage.getItem('nexora_user');
+        if (savedUserData) {
+            showProfile(JSON.parse(savedUserData));
+        } else if (savedUser) {
+            showProfile(savedUser);
+        }
+
+        // ---- Supabase & Google Configuration ----
+        const GOOGLE_CLIENT_ID = '793837663302-qopj5hepf1vnkiovvqihun5h9gdsnp37.apps.googleusercontent.com';
+        const SUPABASE_URL = 'https://rrgwnlfefzcstdtmpojt.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJyZ3dubGZlZnpjc3RkdG1wb2p0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA1Nzg3NzcsImV4cCI6MjEwNjE1NDc3N30.3Eae1B7rueWyrDAhDmGLoAbslEo1jiXAbKzA5_gYyBI';
+
+        // ---- Sync User to Supabase 'users' table ----
+        async function saveUserToSupabase(userData) {
+            try {
+                const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'resolution=merge-duplicates'
+                    },
+                    body: JSON.stringify({
+                        id: userData.id,
+                        email: userData.email,
+                        name: userData.name || '',
+                        picture: userData.picture || '',
+                        last_login: new Date().toISOString()
+                    })
+                });
+                if (!res.ok) {
+                    console.warn('Supabase sync warning:', res.status, await res.text());
+                } else {
+                    console.log('User synced to Supabase successfully:', userData.email);
+                }
+            } catch (err) {
+                console.error('Failed to sync user with Supabase:', err);
+            }
+        }
+
+        // ---- Google Sign-In ----
+        function decodeJwt(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(decodeURIComponent(atob(base64).split('').map(c =>
+                '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
+            ).join('')));
+        }
+
+        async function handleGoogleCredential(response) {
+            try {
+                const payload = decodeJwt(response.credential);
+                const userData = {
+                    id: payload.sub,
+                    email: payload.email,
+                    name: payload.name || payload.email.split('@')[0],
+                    picture: payload.picture || ''
+                };
+                sessionStorage.setItem('nexora_user', userData.email);
+                sessionStorage.setItem('nexora_user_data', JSON.stringify(userData));
+
+                // Save or update real user in Supabase
+                await saveUserToSupabase(userData);
+
+                form.classList.add('hide');
+                success.classList.add('show');
+                setTimeout(() => {
+                    closeModal();
+                    showProfile(userData);
+                    window.location.href = 'dashboard.html';
+                }, 1200);
+            } catch (err) {
+                console.error('Error handling Google credential:', err);
+            }
+        }
+
+        // Initialize Google Sign-In when the library loads
+        let googleInitDone = false;
+        function initGoogleSignIn() {
+            const container = document.getElementById('googleBtnContainer');
+            if (!container) return;
+
+            if (window.google && google.accounts && google.accounts.id) {
+                try {
+                    google.accounts.id.initialize({
+                        client_id: GOOGLE_CLIENT_ID,
+                        callback: handleGoogleCredential,
+                        auto_select: false
+                    });
+                    google.accounts.id.renderButton(container, {
+                        type: 'standard',
+                        theme: 'outline',
+                        size: 'large',
+                        width: container.offsetWidth > 150 ? container.offsetWidth : 320,
+                        text: 'signin_with',
+                        shape: 'rectangular',
+                        logo_alignment: 'left'
+                    });
+                    googleInitDone = true;
+                } catch (e) {
+                    console.error('Error rendering Google button:', e);
+                }
+            }
+        }
+
+        // Try to init on page load (GSI script loads async)
+        window.addEventListener('load', initGoogleSignIn);
+        // Retry in case GSI loads slowly
+        setTimeout(initGoogleSignIn, 1200);
+        setTimeout(initGoogleSignIn, 2500);
+
+        // ---- modal open / close ----
+        function openModal() {
+            overlay.classList.add('open');
+            form.classList.remove('hide');
+            success.classList.remove('show');
+            setTimeout(initGoogleSignIn, 60);
+            document.getElementById('signInEmail').focus();
+        }
+        function closeModal() {
+            overlay.classList.remove('open');
+        }
+        openBtn.addEventListener('click', openModal);
+        closeBtn.addEventListener('click', closeModal);
+        overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal(); });
+
+        document.getElementById('toRegister').addEventListener('click', () => {
+            document.getElementById('signInTitle').textContent = 'Request portal access';
+            form.querySelector('.modal-submit').textContent = 'REQUEST ACCESS →';
+        });
+
+        // ---- form submit — login ----
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('signInEmail');
+            const pass = document.getElementById('signInPass');
+            const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value.trim());
+            const passValid = pass.value.length >= 6;
+            emailField.classList.toggle('invalid', !emailValid);
+            passField.classList.toggle('invalid', !passValid);
+            if (!emailValid || !passValid) return;
+
+            const userEmail = email.value.trim();
+            const userName = getUserName(userEmail);
+            
+            const userData = {
+                id: 'email_' + btoa(userEmail).replace(/[^a-zA-Z0-9]/g, ''),
+                email: userEmail,
+                name: userName,
+                picture: `https://ui-avatars.com/api/?name=${encodeURIComponent(userName)}&background=0D8ABC&color=fff`
+            };
+            
+            sessionStorage.setItem('nexora_user', userEmail);
+            sessionStorage.setItem('nexora_user_data', JSON.stringify(userData));
+
+            await saveUserToSupabase(userData);
+
+            form.classList.add('hide');
+            success.classList.add('show');
+            setTimeout(() => {
+                window.location.href = 'dashboard.html';
+            }, 1400);
+        });
+
+        // ---- profile dropdown toggle ----
+        profileAvatar.addEventListener('click', (e) => {
+            e.stopPropagation();
+            profileDropdown.classList.toggle('open');
+        });
+
+        // close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!profileWrapper.contains(e.target)) {
+                profileDropdown.classList.remove('open');
+            }
+        });
+
+        // ---- logout ----
+        profileLogout.addEventListener('click', () => {
+            hideProfile();
+        });
+
+        // ---- How It Works: scroll-triggered step reveal ----
+        (function () {
+            const steps = document.querySelectorAll('.hiw-step');
+            const lineFill = document.getElementById('hiwLineFill');
+            if (!steps.length || !lineFill) return;
+
+            // click to activate a step
+            steps.forEach(step => {
+                step.addEventListener('click', () => {
+                    steps.forEach(s => s.classList.remove('active'));
+                    step.classList.add('active');
+                });
+            });
+
+            // scroll observer: reveal steps one by one
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+                // update the line fill based on how many steps are visible
+                const visibleCount = document.querySelectorAll('.hiw-step.visible').length;
+                const pct = ((visibleCount - 1) / (steps.length - 1)) * 100;
+                lineFill.style.width = Math.max(0, pct) + '%';
+            }, { threshold: 0.3 });
+
+            steps.forEach((step, i) => {
+                step.style.transitionDelay = (i * 0.12) + 's';
+                observer.observe(step);
+            });
+        })();
+    </script>
+</body>
+
+</html>
