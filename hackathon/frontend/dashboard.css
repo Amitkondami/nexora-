@@ -1,20 +1,20 @@
 /* ===================== DASHBOARD LAYOUT ===================== */
 :root {
-    --bg: #080807;
-    --bg-card: #0f0e0d;
-    --bg-sidebar: #0a0908;
-    --off: #FDFDFD;
-    --text-sec: #989798;
-    --brown: #49392A;
-    --muted: #666767;
-    --accent: #9F6B0A;
-    --accent-glow: rgba(159, 107, 10, .15);
-    --border: rgba(255, 255, 255, .08);
-    --border-hover: rgba(255, 255, 255, .14);
-    --navy: #0a1628;
-    --success: #34d399;
-    --warning: #f59e0b;
-    --danger: #ef4444;
+    --bg: #041C2C;
+    --bg-card: #102F3F;
+    --bg-sidebar: #062A3A;
+    --off: #F7FAFC;
+    --text-sec: #8BA3AE;
+    --brown: #062A3A;
+    --muted: #214454;
+    --accent: #16A6B6;
+    --accent-glow: rgba(34, 211, 216, .15);
+    --border: rgba(33, 68, 84, .5);
+    --border-hover: rgba(34, 211, 216, .25);
+    --navy: #041C2C;
+    --success: #19A974;
+    --warning: #E5A72A;
+    --danger: #D9534F;
     box-sizing: border-box;
 }
 

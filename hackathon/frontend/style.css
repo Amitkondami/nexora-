@@ -1,11 +1,11 @@
 :root {
-    --bg: #080807;
-    --off: #FDFDFD;
-    --text-sec: #989798;
-    --brown: #49392A;
-    --muted: #666767;
-    --accent: #9F6B0A;
-    --beige: #D4C7B6;
+    --bg: #041C2C;
+    --off: #F7FAFC;
+    --text-sec: #8BA3AE;
+    --brown: #062A3A;
+    --muted: #214454;
+    --accent: #16A6B6;
+    --beige: #22D3D8;
     box-sizing: border-box;
     padding-top: env(safe-area-inset-top, 0px);
     padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -71,9 +71,9 @@ nav {
 }
 
 nav.scrolled {
-    background: rgba(8, 8, 7, .82);
+    background: rgba(4, 28, 44, .9);
     backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, .08)
+    border-bottom: 1px solid rgba(247, 250, 252, .1);
 }
 
 nav .row {
@@ -92,8 +92,9 @@ nav .row {
 
 .logo span {
     display: block;
-    color: var(--text-sec);
-    font-weight: 500
+    color: var(--beige);
+    font-weight: 500;
+    text-shadow: 0 0 10px rgba(34, 211, 216, 0.4);
 }
 
 .nav-links {
@@ -163,9 +164,10 @@ nav .row {
 }
 
 .btn-primary {
-    background: var(--off);
-    color: var(--bg);
-    border: 1px solid var(--off)
+    background: var(--accent);
+    color: #F7FAFC;
+    border: 1px solid var(--accent);
+    box-shadow: 0 0 15px rgba(22, 166, 182, 0.4);
 }
 
 .btn-primary:hover {
@@ -228,12 +230,13 @@ header.hero {
     overflow: hidden
 }
 
-.hero-video canvas {
+.hero-video video {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
     display: block;
+    object-fit: cover;
     animation: kenburns 42s ease-in-out infinite alternate;
     transform-origin: 60% 55%;
 }
@@ -261,9 +264,9 @@ header.hero {
     content: '';
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(8, 8, 7, .5) 0%, rgba(8, 8, 7, .25) 42%, rgba(8, 8, 7, .9) 100%),
-        linear-gradient(90deg, rgba(8, 8, 7, .78) 0%, rgba(8, 8, 7, .1) 48%, rgba(8, 8, 7, .2) 100%),
-        radial-gradient(ellipse 60% 45% at 68% 30%, rgba(159, 107, 10, .12), transparent 70%);
+    background: linear-gradient(180deg, rgba(4, 28, 44, .2) 0%, rgba(4, 28, 44, .1) 42%, rgba(4, 28, 44, .7) 100%),
+        linear-gradient(90deg, rgba(4, 28, 44, .4) 0%, rgba(4, 28, 44, .05) 48%, rgba(4, 28, 44, .1) 100%),
+        radial-gradient(ellipse 60% 45% at 68% 30%, rgba(34, 211, 216, .15), transparent 70%);
 }
 
 .hero-inner {
@@ -295,11 +298,13 @@ h1.headline {
     font-weight: 800;
     letter-spacing: -.02em;
     text-transform: uppercase;
+    text-shadow: 0 10px 30px rgba(4, 28, 44, 0.8);
 }
 
 h1.headline em {
     font-style: normal;
-    color: var(--text-sec)
+    color: var(--beige);
+    text-shadow: 0 0 20px rgba(34, 211, 216, 0.5);
 }
 
 .hero-sub {
@@ -336,8 +341,9 @@ h1.headline em {
 }
 
 .hud-col .item {
-    border-right: 1px solid rgba(159, 107, 10, .4);
-    padding-right: 14px
+    border-right: 1px solid rgba(34, 211, 216, .4);
+    padding-right: 14px;
+    text-shadow: 0 0 10px rgba(34, 211, 216, 0.2);
 }
 
 .hud-col .item .label {
@@ -349,7 +355,9 @@ h1.headline em {
 .hud-col .item .val {
     font-size: 20px;
     font-weight: 600;
-    margin-top: 4px
+    margin-top: 4px;
+    color: var(--off);
+    text-shadow: 0 0 12px rgba(247, 250, 252, 0.3);
 }
 
 .scroll-cue {
@@ -385,7 +393,8 @@ h1.headline em {
     left: 0;
     width: 100%;
     height: 40%;
-    background: var(--off);
+    background: var(--beige);
+    box-shadow: 0 0 8px var(--beige);
     animation: scrolldown 2.2s ease-in-out infinite
 }
 

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Nexora Freight — Global Logistics &amp; Supply Chain Solutions</title>
     <meta name="description"
-        content="Nexora Freight provides global ocean, air, road and rail logistics, freight forwarding, supply-chain visibility and transportation solutions.">
+        content="Nexora Freight provides global ocean logistics, freight forwarding, supply-chain visibility and transportation solutions.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
@@ -71,39 +71,23 @@
         </div>
     </nav>
 
-    <header class="hero">
-        <div class="hero-video" aria-hidden="true"><canvas id="oceanScene"></canvas>
-            <div class="grain"></div>
+    <header class="hero" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; position: relative;">
+        <div class="hero-video" aria-hidden="true">
+            <video id="oceanScene" src="hero-video.mp4" autoplay loop muted playsinline style="position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;"></video>
         </div>
-        <div class="wrap">
-            <div class="eyebrow mono"><span>GLOBAL FREIGHT &amp; LOGISTICS</span><span>EST. 2008</span></div>
-            <div class="hero-inner">
-                <div>
-                    <h1 class="headline">Move<br>what<br><em>matters.</em></h1>
-                    <p class="hero-sub">Nexora Freight coordinates ocean, air, road and rail movement for companies who
-                        cannot afford uncertainty in their supply chain.</p>
-                    <div class="hero-ctas">
-                        <a href="#" class="btn btn-primary">REQUEST A QUOTE <span class="arrow">→</span></a>
-                        <a href="#" class="btn btn-ghost">TRACK SHIPMENT <span class="arrow">↗</span></a>
-                    </div>
-                </div>
-                <div class="hud-col mono">
-                    <div class="item">
-                        <div class="label">GLOBAL NETWORK</div>
-                        <div class="val">86 countries</div>
-                    </div>
-                    <div class="item">
-                        <div class="label">ANNUAL VOLUME</div>
-                        <div class="val">1.8M+ TEU</div>
-                    </div>
-                    <div class="item">
-                        <div class="label">ON-TIME PERFORMANCE</div>
-                        <div class="val">98.7%</div>
-                    </div>
-                </div>
+        <div class="wrap" style="position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;">
+            <div class="eyebrow mono" style="color: #F8FAFC; justify-content: center;"><span>GLOBAL FREIGHT &amp; LOGISTICS</span><span>EST. 2008</span></div>
+            <h1 class="headline" style="color: #FFFFFF; font-size: clamp(50px, 10vw, 150px); text-shadow: 0 10px 40px rgba(0,0,0,0.5);">Move<br>what<br><em style="color: #16A6B6; text-shadow: 0 0 30px rgba(22,166,182,0.6);">matters.</em></h1>
+            <p class="hero-sub" style="color: #E2E8F0; text-align: center; margin: 24px auto; max-width: 600px;">Nexora Freight coordinates ocean, air, road and rail movement for companies who cannot afford uncertainty in their supply chain.</p>
+            <div class="hero-ctas" style="justify-content: center;">
+                <a href="#" class="btn btn-primary" style="background: #16A6B6; border-color: #16A6B6; color: #FFF; box-shadow: 0 8px 24px rgba(22,166,182,0.4);">REQUEST A QUOTE <span class="arrow">→</span></a>
+                <a href="#" class="btn btn-ghost" style="color: #FFF; border-color: rgba(255,255,255,0.4);">TRACK SHIPMENT <span class="arrow">↗</span></a>
             </div>
         </div>
-        <div class="scroll-cue"><span>SCROLL TO EXPLORE</span><span class="line"></span></div>
+        <div class="scroll-cue" style="position: absolute; bottom: 40px; color: #F8FAFC; left: 50%; transform: translateX(-50%); flex-direction: column; align-items: center; justify-content: center;">
+            <span style="margin-bottom: 12px; font-size: 11px;">SCROLL TO EXPLORE</span>
+            <span class="line" style="height: 60px; width: 1px; background: rgba(255,255,255,0.2); position: relative; overflow: hidden; display: block;"><span style="position: absolute; top: 0; left: 0; width: 100%; height: 30%; background: #16A6B6; animation: scrolldown 2s infinite;"></span></span>
+        </div>
     </header>
 
     <div class="modal-overlay" id="signInOverlay" role="dialog" aria-modal="true" aria-labelledby="signInTitle">
@@ -312,131 +296,6 @@
         const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
         // ---- animated ocean / ship "video" scene ----
-        (function () {
-            const canvas = document.getElementById('oceanScene');
-            const ctx = canvas.getContext('2d');
-            let w, h, dpr = Math.min(window.devicePixelRatio || 1, 2);
-            function resize() {
-                w = canvas.parentElement.offsetWidth; h = canvas.parentElement.offsetHeight;
-                canvas.width = w * dpr; canvas.height = h * dpr;
-                canvas.style.width = w + 'px'; canvas.style.height = h + 'px';
-                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            }
-            resize();
-            window.addEventListener('resize', resize);
-
-            const waves = [
-                { amp: 8, len: 0.022, speed: .014, y: .66, color: 'rgba(38,32,27,0.55)' },
-                { amp: 13, len: 0.017, speed: .010, y: .74, color: 'rgba(24,20,17,0.75)' },
-                { amp: 18, len: 0.013, speed: .007, y: .83, color: 'rgba(14,12,10,0.92)' },
-                { amp: 26, len: 0.010, speed: .005, y: .94, color: 'rgba(8,8,7,1)' }
-            ];
-            const gulls = Array.from({ length: 4 }, (_, i) => ({ x: Math.random(), y: .22 + Math.random() * .12, s: .4 + Math.random() * .4, off: i * 1.7 }));
-            let t = 0;
-            let shipX = -0.18;
-            const smoke = [];
-
-            function drawSun() {
-                const sx = w * 0.7, sy = h * 0.28;
-                const glow = ctx.createRadialGradient(sx, sy, 0, sx, sy, w * 0.32);
-                glow.addColorStop(0, 'rgba(159,107,10,0.35)');
-                glow.addColorStop(1, 'rgba(159,107,10,0)');
-                ctx.fillStyle = glow;
-                ctx.fillRect(0, 0, w, h);
-            }
-
-            function drawGull(g) {
-                const x = ((g.x + t * 0.00006 * g.s) % 1.15) * w - 0.1 * w;
-                const y = g.y * h + Math.sin(t * 0.02 + g.off) * 4;
-                ctx.strokeStyle = 'rgba(200,190,180,0.35)';
-                ctx.lineWidth = 1.4;
-                ctx.beginPath();
-                ctx.moveTo(x - 6, y); ctx.quadraticCurveTo(x, y - 4, x + 6, y);
-                ctx.moveTo(x, y); ctx.quadraticCurveTo(x + 6, y - 4, x + 12, y);
-                ctx.stroke();
-            }
-
-            function drawDistantShip() {
-                const x = w * 0.18, y = h * 0.62;
-                ctx.fillStyle = 'rgba(20,17,15,0.55)';
-                ctx.fillRect(x - 38, y, 76, 7);
-                ctx.fillRect(x - 6, y - 14, 5, 14);
-            }
-
-            function drawShip(x, baseY) {
-                const sx = x * w, sy = baseY * h;
-                ctx.save();
-                ctx.translate(sx, sy);
-                // hull
-                ctx.fillStyle = 'rgba(26,22,19,0.96)';
-                ctx.beginPath();
-                ctx.moveTo(-100, 14); ctx.lineTo(100, 14); ctx.lineTo(82, 30); ctx.lineTo(-82, 30); ctx.closePath();
-                ctx.fill();
-                // containers
-                const colors = ['rgba(73,57,42,0.92)', 'rgba(102,103,103,0.85)', 'rgba(159,107,10,0.55)', 'rgba(52,44,36,0.92)'];
-                for (let i = 0; i < 6; i++) {
-                    ctx.fillStyle = colors[i % colors.length];
-                    ctx.fillRect(-84 + i * 29, -8, 24, 18);
-                }
-                // bridge + funnel
-                ctx.fillStyle = 'rgba(96,80,64,0.95)';
-                ctx.fillRect(68, -28, 16, 38);
-                ctx.fillStyle = 'rgba(40,33,27,0.95)';
-                ctx.fillRect(74, -42, 7, 16);
-                ctx.restore();
-
-                // funnel smoke
-                if (!reduced && Math.random() < 0.35) {
-                    smoke.push({ x: sx + 77, y: sy - 44, life: 0, r: 2 + Math.random() * 2 });
-                }
-            }
-
-            function drawSmoke() {
-                for (let i = smoke.length - 1; i >= 0; i--) {
-                    const p = smoke[i];
-                    p.life += 1; p.y -= 0.35; p.x += 0.12; p.r += 0.03;
-                    const alpha = Math.max(0, 0.18 - p.life * 0.0014);
-                    if (alpha <= 0) { smoke.splice(i, 1); continue; }
-                    ctx.fillStyle = `rgba(180,175,168,${alpha})`;
-                    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
-                }
-            }
-
-            function frame() {
-                ctx.clearRect(0, 0, w, h);
-                const g = ctx.createLinearGradient(0, 0, 0, h);
-                g.addColorStop(0, '#0d0c0a'); g.addColorStop(.55, '#0a0908'); g.addColorStop(1, '#040403');
-                ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
-
-                drawSun();
-                gulls.forEach(drawGull);
-                drawDistantShip();
-
-                if (!reduced) { t += 1; shipX += 0.00022; if (shipX > 1.2) shipX = -0.2; }
-                drawShip(shipX, 0.68);
-                drawSmoke();
-
-                // fog band for depth
-                const fog = ctx.createLinearGradient(0, h * 0.55, 0, h * 0.78);
-                fog.addColorStop(0, 'rgba(10,9,8,0)'); fog.addColorStop(1, 'rgba(10,9,8,0.4)');
-                ctx.fillStyle = fog; ctx.fillRect(0, h * 0.5, w, h * 0.3);
-
-                waves.forEach((wave, i) => {
-                    ctx.beginPath();
-                    ctx.moveTo(0, h);
-                    for (let x = 0; x <= w; x += 8) {
-                        const y = wave.y * h + Math.sin(x * wave.len + t * wave.speed + i) * wave.amp;
-                        ctx.lineTo(x, y);
-                    }
-                    ctx.lineTo(w, h); ctx.closePath();
-                    ctx.fillStyle = wave.color;
-                    ctx.fill();
-                });
-
-                if (!reduced) requestAnimationFrame(frame);
-            }
-            frame();
-        })();
 
         // ---- services accordion + cursor preview ----
         const rows = document.querySelectorAll('.service-row');
